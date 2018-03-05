@@ -84,6 +84,11 @@ public class Config {
         throw new IllegalArgumentException(name + " has value " + v + " which is not in the range");
     }
 
+    public boolean getBoolean(String name, boolean defaultValue) {
+        if (!properties.containsKey(name)) return defaultValue;
+        return "true".equalsIgnoreCase(properties.getProperty(name));
+    }
+
     protected int get(String name, int defaultValue) {
         return getInt(name, defaultValue);
     }
