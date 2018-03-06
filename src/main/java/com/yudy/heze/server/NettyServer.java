@@ -132,10 +132,10 @@ public class NettyServer {
 
     public void stop(){
         LOGGER.info("Netty server is stoping");
-        bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
         if(f.channel()!=null)
             f.channel().close();
+        bossGroup.shutdownGracefully();
+        workerGroup.shutdownGracefully();
     }
 
     public void waitForClose() throws InterruptedException {
