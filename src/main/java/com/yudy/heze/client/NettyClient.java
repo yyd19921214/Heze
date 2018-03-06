@@ -1,10 +1,12 @@
 package com.yudy.heze.client;
 
+import com.yudy.heze.config.ServerConfig;
 import com.yudy.heze.exception.SendRequestException;
 import com.yudy.heze.exception.TimeoutException;
 import com.yudy.heze.network.Message;
 import com.yudy.heze.serializer.NettyDecoder;
 import com.yudy.heze.serializer.NettyEncode;
+import com.yudy.heze.zk.ZKClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -34,8 +36,23 @@ public class NettyClient {
 
     private Channel channel;
 
+    public ZKClient zkClient;
+
+
     public NettyClient() {
         this.eventLoopGroupWorker = new NioEventLoopGroup();
+    }
+
+    public void initZKClient(ServerConfig config){
+        if (config.getEnableZookeeper()&&zkClient==null){
+            String authString=config.getZkUsername()+":"+config.getZkPassword();
+            this.zkClient=new ZKClient();
+
+
+        }
+
+//        if ()
+
     }
 
     public void open(String host, int port) {
