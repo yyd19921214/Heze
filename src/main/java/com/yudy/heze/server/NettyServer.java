@@ -1,12 +1,20 @@
 package com.yudy.heze.server;
 
 import com.yudy.heze.config.ServerConfig;
+import com.yudy.heze.serializer.NettyDecoder;
+import com.yudy.heze.serializer.NettyEncode;
+import com.yudy.heze.server.backup.EmbeddedConsumer;
+import com.yudy.heze.store.TopicQueuePool;
 import com.yudy.heze.util.PortUtils;
+import com.yudy.heze.zk.ZKClient;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +36,8 @@ public class NettyServer {
 
     private ChannelFuture f;
 
+    private final IntObjectMap<RequestHandler> handlerMap = new IntObjectHashMap<>(128);
+
 //    private ServerRegi
 
     public void start(int port) {
@@ -48,7 +58,7 @@ public class NettyServer {
             LOGGER.error(String.format("ERROR: Main config file not exist => '%s', copy one from 'conf/server.properties.sample' first.", configFile.getAbsolutePath()));
             System.exit(2);
         }
-        final ServerConfig config=new ServerConfig(configFile);
+        final ServerConfig config = new ServerConfig(configFile);
 //        start(config);
 
     }
@@ -57,59 +67,106 @@ public class NettyServer {
 //        start(new Ser);
     }
 
-    public void start(ServerConfig config){
+    public void start(ServerConfig config) {
         LOGGER.info("server is starting...");
-        int port=PortUtils.checkAvailablePort(config.getPort());
+        int port = PortUtils.checkAvailablePort(config.getPort());
+
+        ServerBootstrap b = configServer();
 
 
-    }
-
-    public static void main(String[] args) {
-        String configFileName="D:\\xxl-mq\\xxl-mq\\xxl-mq-broker\\pom.xml";
         try {
-            File configFile = new File(configFileName).getCanonicalFile();
-            if (configFile.isFile())
-                System.out.println("yes");
-            BufferedReader b=new BufferedReader(new FileReader(configFile));
-            String readLine="";
-            while ((readLine=b.readLine())!=null)
-                System.out.println(readLine);
-        } catch (IOException e) {
+            if (StringUtils.isNotBlank(config.getHost())) {
+                f = b.bind(config.getHost(), config.getPort()).sync();
+            } else {
+                f = b.bind(config.getPort()).sync();
+            }
+            Runtime.getRuntime().addShutdownHook(new ShutdownThread());
+        } catch (InterruptedException e) {
+            LOGGER.error("Exception happen when start server", e);
             e.printStackTrace();
         }
 
+        ZKClient zkClient=null;
+        if (config.getEnableZookeeper()){
+            ServerRegister serverRegister=new ServerRegister();
+            zkClient=serverRegister.startup(config);
+        }
+
+        TopicQueuePool.startup(zkClient,config);
+
+        if (config.getReplicaHost()!=null)
+            EmbeddedConsumer.getInstance().start(config);
+
+
+
+
     }
 
-    private ServerBootstrap configServer(){
-        bossGroup=new NioEventLoopGroup();
-        workerGroup=new NioEventLoopGroup();
+    private ServerBootstrap configServer() {
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
 
-        ServerBootstrap b=new ServerBootstrap();
+        ServerBootstrap b = new ServerBootstrap();
 
-        b.group(bossGroup,workerGroup).channel(NioServerSocketChannel.class)
-                .option(ChannelOption.SO_BACKLOG,1024).option(ChannelOption.TCP_NODELAY,true)
-                .option(ChannelOption.SO_TIMEOUT,6000)
-                .childOption(ChannelOption.SO_REUSEADDR,true).childOption(ChannelOption.SO_KEEPALIVE,true)
+        b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_BACKLOG, 1024).option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.SO_TIMEOUT, 6000)
+                .childOption(ChannelOption.SO_REUSEADDR, true).childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 
         b.childHandler(new ChannelInitializer() {
             @Override
             protected void initChannel(Channel channel) throws Exception {
-//                channel.pipeline().addLast(new Ne)
+                channel.pipeline().addLast(
+                        new NettyDecoder(),
+                        new NettyEncode(),
+                        new NettyServerHandler(handlerMap)
+
+                );
 
             }
         });
         return b;
     }
 
-    class ShutdownThread extends Thread{
+
+    public void stop(){
+        LOGGER.info("Netty server is stoping");
+        bossGroup.shutdownGracefully();
+        workerGroup.shutdownGracefully();
+        if(f.channel()!=null)
+            f.channel().close();
+    }
+
+    public void waitForClose() throws InterruptedException {
+        f.channel().closeFuture().sync();
+
+    }
+
+
+    class ShutdownThread extends Thread {
         @Override
         public void run() {
-            //TODO
+            NettyServer.this.stop();
         }
     }
 
 
+    public static void main(String[] args) {
+        String configFileName = "D:\\xxl-mq\\xxl-mq\\xxl-mq-broker\\pom.xml";
+        try {
+            File configFile = new File(configFileName).getCanonicalFile();
+            if (configFile.isFile())
+                System.out.println("yes");
+            BufferedReader b = new BufferedReader(new FileReader(configFile));
+            String readLine = "";
+            while ((readLine = b.readLine()) != null)
+                System.out.println(readLine);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 
 
 }

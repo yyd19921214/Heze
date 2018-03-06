@@ -2,12 +2,16 @@ package com.yudy.heze.network;
 
 import com.yudy.heze.util.DataUtils;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Message {
 
     private final static AtomicInteger RequestId = new AtomicInteger(1);
+
+    //表示整个message长度的字段的长度,需要在包处理时跳过
+    public final static int FRAME_LEN = 4;
 
     public final static int MAGIC = 0xf11f;
 
@@ -106,19 +110,94 @@ public class Message {
 
     public void writeToByteBuf(ByteBuf byteBuf) {
         if (byteBuf != null) {
-            byteBuf.writeInt(Message.HEAD_LEN+bodyLength()+Message.CRC_LEN);
-
+            byteBuf.writeInt(serializedSize());
             byteBuf.writeShort(getMagic());
             byteBuf.writeByte(getVersion());
             byteBuf.writeByte(getType());
             byteBuf.writeShort(getReqHandlerType());
             byteBuf.writeInt(getSeqId());
-
-            if (bodyLength()>0)
+            if (bodyLength() > 0)
                 byteBuf.writeBytes(body);
-            long crc32= DataUtils.calculateChecksum(byteBuf,byteBuf.readerIndex()+4,byteBuf.readableBytes()-4);
+            long crc32 = DataUtils.calculateChecksum(byteBuf, byteBuf.readerIndex() + 4, byteBuf.readableBytes() - 4);
             byteBuf.writeBytes(DataUtils.uint32ToBytes(crc32));
         }
+    }
+
+    public void readFromByteBuf(ByteBuf byteBuf) {
+        if (byteBuf != null) {
+
+            int len = byteBuf.readableBytes() - CRC_LEN;
+            long crc32 = DataUtils.calculateChecksum(byteBuf, byteBuf.readerIndex(), len);
+            int magic = byteBuf.readUnsignedShort();
+            if (magic != MAGIC) {
+                byteBuf.discardReadBytes();
+                byteBuf.release();
+                throw new RuntimeException("协议magic无效");
+            }
+
+            byte version = byteBuf.readByte();
+            byte type = byteBuf.readByte();
+            short reqHandlerType = byteBuf.readShort();
+            int seqId = byteBuf.readInt();
+
+            int body_len = len - HEAD_LEN;
+            byte[] body = new byte[body_len];
+            byteBuf.readBytes(body);
+
+            long read_crc32 = byteBuf.readUnsignedInt();
+            if (read_crc32 != crc32) {
+                byteBuf.discardReadBytes();
+                byteBuf.release();
+                throw new RuntimeException("CRC32不对");
+            }
+
+            this.setVersion(version);
+            this.setType(type);
+            this.setSeqId(seqId);
+            this.setReqHandlerType(reqHandlerType);
+            this.setBody(body);
+
+            byteBuf.release();
+
+        }
+    }
+
+    public static Message buildFromByteBuf(ByteBuf byteBuf) {
+        Message msg = new Message();
+        msg.readFromByteBuf(byteBuf);
+        return msg;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("magic:%s, version:%s, type:%s, reqHandlerType:%s, seqId:%d", magic, version, type, reqHandlerType, seqId);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Message) {
+            Message m = (Message) obj;
+            return getMagic() == m.getMagic()//
+                    && getVersion() == m.getVersion()//
+                    && getType() == m.getType()//
+                    && getReqHandlerType() == m.getReqHandlerType()//
+                    && getSeqId() == m.getSeqId()
+                    && bodyLength() == m.bodyLength();
+        }
+        return false;
+    }
+
+
+    public static void main(String[] args) {
+        Message msg = newRequestMessage();
+        msg.body = "abcd".getBytes();
+        System.out.println(msg.seqId);
+        System.out.println(msg.body[0]);
+        ByteBuf inBuf = Unpooled.buffer();
+        msg.writeToByteBuf(inBuf);
+        inBuf.skipBytes(FRAME_LEN);
+        Message msg2 = newRequestMessage();
+        msg2.readFromByteBuf(inBuf);
     }
 
 
