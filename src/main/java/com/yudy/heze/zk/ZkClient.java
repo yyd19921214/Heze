@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,9 +42,42 @@ public class ZkClient implements Watcher,Closeable{
     private Thread _zooKeeperEventThread;
 
 
-    public ZkClient(String connectString,String authStr){
+    public ZkClient(String connectString, String authStr) {
+        this(connectString, authStr, DEFAULT_CONNECTION_TIMEOUT);
+    }
+
+    public ZkClient(String connectString, String authStr, int connectionTimeout) {
+        this(connectString, authStr, DEFAULT_SESSION_TIMEOUT, connectionTimeout);
+    }
+
+    public ZkClient(String connectString, String authStr, int sessionTimeout, int connectionTimeout) {
+        this(new ZkConnection(connectString, sessionTimeout, authStr), connectionTimeout);
+    }
+
+
+    public ZkClient(ZkConnection zkConnection,int connectionTimeout){
+        this.zkConnection=zkConnection;
+        //TODO
+    }
+
+    public List<String> subscribeChildChanges(String path, ZkChildListener listener){
+        synchronized (_childListener){
+            Set<ZkChildListener> listeners=_childListener.get(path);
+            if (listeners==null){
+                listeners=new CopyOnWriteArraySet<>();
+                _childListener.put(path,listeners);
+            }
+
+            listeners.add(listener);
+        }
+
+        return watchForChilds(path);
 
     }
+
+
+
+
 
 
 
