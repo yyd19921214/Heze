@@ -6,7 +6,7 @@ import com.yudy.heze.serializer.NettyEncode;
 import com.yudy.heze.server.backup.EmbeddedConsumer;
 import com.yudy.heze.store.TopicQueuePool;
 import com.yudy.heze.util.PortUtils;
-import com.yudy.heze.zk.ZKClient;
+import com.yudy.heze.zk.ZkClient;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -22,10 +22,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Properties;
-import java.util.stream.Stream;
 
 public class NettyServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyServer.class);
@@ -86,7 +83,7 @@ public class NettyServer {
             e.printStackTrace();
         }
 
-        ZKClient zkClient=null;
+        ZkClient zkClient=null;
         if (config.getEnableZookeeper()){
             ServerRegister serverRegister=new ServerRegister();
             zkClient=serverRegister.startup(config);

@@ -1,11 +1,11 @@
 package com.yudy.heze.server;
 
 import com.yudy.heze.config.ServerConfig;
-import com.yudy.heze.zk.ZKClient;
+import com.yudy.heze.zk.ZkClient;
 
 public class ServerRegister {
 
-    public ZKClient startup(ServerConfig config) {
+    public ZkClient startup(ServerConfig config) {
         return null;
 
     }

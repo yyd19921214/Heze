@@ -6,7 +6,7 @@ import com.yudy.heze.exception.TimeoutException;
 import com.yudy.heze.network.Message;
 import com.yudy.heze.serializer.NettyDecoder;
 import com.yudy.heze.serializer.NettyEncode;
-import com.yudy.heze.zk.ZKClient;
+import com.yudy.heze.zk.ZkClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -36,7 +36,7 @@ public class NettyClient {
 
     private Channel channel;
 
-    public ZKClient zkClient;
+    public ZkClient zkClient;
 
 
     public NettyClient() {
@@ -46,7 +46,7 @@ public class NettyClient {
     public void initZKClient(ServerConfig config){
         if (config.getEnableZookeeper()&&zkClient==null){
             String authString=config.getZkUsername()+":"+config.getZkPassword();
-            this.zkClient=new ZKClient();
+            this.zkClient=new ZkClient();
 
 
         }
