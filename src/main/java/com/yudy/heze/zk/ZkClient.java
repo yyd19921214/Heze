@@ -1,12 +1,14 @@
 package com.yudy.heze.zk;
 
+import com.yudy.heze.exception.ZkInterruptedException;
 import com.yudy.heze.exception.ZkNoNodeException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.omg.CORBA.PRIVATE_MEMBER;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -215,10 +217,9 @@ public class ZkClient implements Watcher, Closeable {
         try {
             if (getShutdownTrigger()) {
                 LOG.debug("ignoring event '{" + watchedEvent.getType() + " | " + watchedEvent.getPath() + "}' since shutdown triggered");
-
             }
             if (stateChanged) {
-                //TODO
+                processStateChanged(watchedEvent);
             }
             if (dataChanged) {
                 //TODO
@@ -233,16 +234,121 @@ public class ZkClient implements Watcher, Closeable {
                     //TODO
                 }
             }
-            if (znodeChanged){
+            if (znodeChanged) {
                 getEventLock().getZNodeEventCondition().signalAll();
             }
-            if (dataChanged){
+            if (dataChanged) {
                 getEventLock().getDataChangedCondition().signalAll();
             }
             getEventLock().unlock();
             LOG.debug("Leaving process event");
         }
 
+    }
+
+    private void processStateChanged(WatchedEvent watchedEvent) {
+        LOG.info("zookeeper state changed (" + watchedEvent.getState() + ")");
+        setCurrentState(watchedEvent.getState());
+        if (getShutdownTrigger())
+            return;
+        try {
+            fireStateChangedEvents(watchedEvent.getState());
+            if (watchedEvent.getState() == KeeperState.Expired) {
+                connect();
+                fireNewSessionEvents();
+            }
+
+
+        } catch (Exception e) {
+            throw new RuntimeException("Exception while restarting zk client", e);
+        }
+
+    }
+
+    private void processDataOrChildChange(WatchedEvent watchedEvent){
+        String path=watchedEvent.getPath();
+        if (watchedEvent.getType()== EventType.NodeCreated||watchedEvent.getType()== EventType.NodeChildrenChanged
+                ||watchedEvent.getType()== EventType.NodeDeleted){
+            Set<ZkChildListener> childListeners=_childListener.get(path);
+            if (childListeners!=null&&!childListeners.isEmpty()){
+                //TODO
+            }
+        }
+
+        if (watchedEvent.getType()==EventType.NodeDataChanged||watchedEvent.getType()==EventType.NodeDeleted
+                ||watchedEvent.getType()==EventType.NodeCreated){
+            Set<ZkDataListener> dataListeners=_dataListener.get(path);
+            if (dataListeners!=null&&!dataListeners.isEmpty()){
+                //TODO
+            }
+        }
+    }
+
+    public void setCurrentState(KeeperState currentState) {
+        getEventLock().lock();
+        _currentState = currentState;
+        getEventLock().unlock();
+    }
+
+    private void fireStateChangedEvents(final KeeperState state) {
+        for (ZkStateListener stateListener : _stateListener) {
+            _eventThread.send(new ZkEventThread.ZkEvent("State changed to " + state + "listener by" + stateListener) {
+                @Override
+                public void run() throws Exception {
+                    stateListener.handleStateChange(state);
+                }
+            });
+        }
+    }
+
+    private void fireNewSessionEvents(){
+        for (ZkStateListener stateListener:_stateListener){
+            _eventThread.send(new ZkEventThread.ZkEvent(" new session start and listener by" + stateListener) {
+                @Override
+                public void run() throws Exception {
+                    stateListener.handleNewSession();
+                }
+            });
+
+        }
+    }
+
+    private void fireDataChangedEvents(String path,Set<ZkDataListener> listeners){
+        for (ZkDataListener listener:listeners){
+            _eventThread.send(new ZkEventThread.ZkEvent("data of "+path+" changed sent to "+listener) {
+                @Override
+                public void run() throws Exception {
+                    exists(path,true);
+                    //TODO
+//                    byte[] data=readData
+
+
+                }
+            });
+        }
+    }
+
+
+    protected byte[] readData(String path, Stat stat,boolean watch){
+        byte[] data=retryUntilConnected(()->
+         zkConnection.readData(path,stat,watch)
+        );
+        return data;
+    }
+
+
+
+
+    private void connect() throws ZkInterruptedException {
+        getEventLock().lock();
+        try {
+            zkConnection.close();
+            zkConnection.connect(this);
+        }catch (InterruptedException e){
+            throw new ZkInterruptedException(e);
+        }finally {
+            getEventLock().unlock();
+        }
     }
 
     @Override

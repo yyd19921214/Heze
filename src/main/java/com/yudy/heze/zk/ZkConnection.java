@@ -80,34 +80,33 @@ public class ZkConnection {
         }
     }
 
-    public void close(){
+    public void close() throws InterruptedException {
         _zookeeperLock.lock();
-        if (_zk!=null){
-            LOG.debug("Closing Zookeeper connected to "+_servers);
-            try {
+        try {
+            if (_zk != null) {
+                LOG.debug("Closing Zookeeper connected to " + _servers);
                 _zk.close();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                _zk = null;
             }
-            _zk=null;
+        } finally {
+            _zookeeperLock.unlock();
         }
-        _zookeeperLock.unlock();
     }
 
     public String create(String path, byte[] data, CreateMode mode) throws KeeperException, InterruptedException {
-        return _zk.create(path,data,acls,mode);
+        return _zk.create(path, data, acls, mode);
     }
 
     public void delete(String path) throws KeeperException, InterruptedException {
-        _zk.delete(path,-1);
+        _zk.delete(path, -1);
     }
 
-    public boolean exists(String path,boolean watch) throws KeeperException, InterruptedException {
+    public boolean exists(String path, boolean watch) throws KeeperException, InterruptedException {
         return null != _zk.exists(path, watch);
     }
 
-    public List<String> getChildren(final String path,final boolean watch) throws KeeperException, InterruptedException {
-        return _zk.getChildren(path,watch);
+    public List<String> getChildren(final String path, final boolean watch) throws KeeperException, InterruptedException {
+        return _zk.getChildren(path, watch);
     }
 
     public byte[] readData(String path, Stat stat, boolean watch) throws KeeperException, InterruptedException {
@@ -123,14 +122,14 @@ public class ZkConnection {
     }
 
     public long getCreateTime(String path) throws KeeperException, InterruptedException {
-        Stat stat=_zk.exists(path,false);
-        if (stat!=null){
+        Stat stat = _zk.exists(path, false);
+        if (stat != null) {
             return stat.getCtime();
         }
         return -1;
     }
 
-    public String getServers(){
+    public String getServers() {
         return _servers;
     }
 
