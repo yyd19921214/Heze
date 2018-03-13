@@ -2,15 +2,13 @@ package com.yudy.heze.zk;
 
 import com.yudy.heze.exception.*;
 import org.apache.zookeeper.*;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.sql.Time;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -255,7 +253,7 @@ public class ZkClient implements Watcher, Closeable {
     }
 
 
-    protected boolean exists(final String path, final boolean watch) {
+    public boolean exists(final String path, final boolean watch) {
         return retryUntilConnected(() -> zkConnection.exists(path, true));
     }
 
@@ -332,7 +330,7 @@ public class ZkClient implements Watcher, Closeable {
         return delete(path);
     }
 
-    private boolean delete(final String path) {
+    public boolean delete(final String path) {
         return retryUntilConnected(() -> {
             zkConnection.delete(path);
             return null;
@@ -345,7 +343,7 @@ public class ZkClient implements Watcher, Closeable {
                 || watchedEvent.getType() == EventType.NodeDeleted) {
             Set<ZkChildListener> childListeners = _childListener.get(path);
             if (childListeners != null && !childListeners.isEmpty()) {
-                //TODO
+               fireChildChangeEvents(path,childListeners);
             }
         }
 
