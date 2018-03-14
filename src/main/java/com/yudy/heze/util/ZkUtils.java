@@ -1,12 +1,17 @@
 package com.yudy.heze.util;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import com.yudy.heze.cluster.Group;
 import com.yudy.heze.exception.ZkNoNodeException;
+import com.yudy.heze.server.ServerRegister;
 import com.yudy.heze.zk.ZkClient;
+import org.apache.commons.lang.StringUtils;
+import org.apache.zookeeper.ZKUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
-import java.util.List;
+import java.util.*;
 
 public class ZkUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(ZkUtils.class);
@@ -81,6 +86,40 @@ public class ZkUtils {
             return s.getBytes();
         }
     }
+
+    public static void getCluster(ZkClient zkClient){
+        try {
+            if (zkClient.getZooKeeper().getState().isAlive()){
+                List<String> allGroupsName= ZkUtils.getChildrenParentMayNotExist(zkClient, ServerRegister.ZK_BROKER_GROUP);
+                Collections.sort(allGroupsName);
+                if (allGroupsName!=null){
+                    Map<String,String> slaveIp=new HashMap<>();
+                    for (String group:allGroupsName){
+                        String jsonGroup=ZkUtils.readData(zkClient,ServerRegister.ZK_BROKER_GROUP+"/"+group);
+                        if (StringUtils.isNotBlank(jsonGroup)){
+                            Group groupObj=DataUtils.json2BrokerGroup(jsonGroup);
+                            if (groupObj.getSlaveOf()!=null){
+                                //TODO
+                                //verify if it need reversed???
+                                slaveIp.put(groupObj.getMaster().getHost(),groupObj.getSlaveOf().getHost());
+                            }
+
+                        }
+                    }
+                    //TODO
+                    List<Group> noSlave=new ArrayList<>();
+//                    for (Group group:)
+                }
+            }
+
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+
 
 
 

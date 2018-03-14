@@ -1,10 +1,17 @@
 package com.yudy.heze.util;
 
+import com.google.gson.*;
+import com.yudy.heze.cluster.Group;
 import io.netty.buffer.ByteBuf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.nio.ByteOrder;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.zip.CRC32;
 
 public class DataUtils {
@@ -52,6 +59,44 @@ public class DataUtils {
             buf[offset + 3] = (byte) (0xff & (value >>> 24));
         }
     }
+
+    static class TimestampTypeAdapter implements JsonSerializer<Timestamp>, JsonDeserializer<Timestamp> {
+        public JsonElement serialize(Timestamp src, Type arg1, JsonSerializationContext arg2) {
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String dateFormatAsString = format.format(new Date(src.getTime()));
+            return new JsonPrimitive(dateFormatAsString);
+        }
+
+        public Timestamp deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            if (!(json instanceof JsonPrimitive)) {
+                throw new JsonParseException("The date should be a string value");
+            }
+
+            try {
+                DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                Date date = (Date) format.parse(json.getAsString());
+                return new Timestamp(date.getTime());
+            } catch (Exception e) {
+                throw new JsonParseException(e);
+            }
+        }
+    }
+
+
+    private static final Gson GSON = new GsonBuilder().registerTypeAdapter(Timestamp.class,new TimestampTypeAdapter()).setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+
+    public static String brokerGroup2Json(Group group){
+        return GSON.toJson(group);
+    }
+
+    public static Group json2BrokerGroup(String json){
+        return GSON.fromJson(json, Group.class);
+    }
+
+
+
+
+
 
 
 
