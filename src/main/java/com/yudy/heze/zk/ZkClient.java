@@ -257,7 +257,7 @@ public class ZkClient implements Watcher, Closeable {
         return retryUntilConnected(() -> zkConnection.exists(path, true));
     }
 
-    private boolean exists(final String path) {
+    public boolean exists(final String path) {
         return exists(path, hasListener(path));
     }
 

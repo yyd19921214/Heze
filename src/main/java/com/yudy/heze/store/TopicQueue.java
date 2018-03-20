@@ -1,6 +1,7 @@
 package com.yudy.heze.store;
 
 import com.yudy.heze.network.Message;
+import com.yudy.heze.store.disk.DiskAndZkTopicQueueIndex;
 import com.yudy.heze.store.zk.ZkTopicQueueReadIndex;
 import com.yudy.heze.zk.ZkClient;
 import io.netty.buffer.ByteBuf;
@@ -37,10 +38,11 @@ public class TopicQueue extends AbstractQueue<byte[]> {
         this.queueName = queueName;
         this.fileDir = fileDir;
         if (backup && zkClient != null) {
-            //TODO
-            this.index = new ZkTopicQueueReadIndex();
+            // 这是一个backuo队列
+            this.index = new ZkTopicQueueReadIndex(queueName,zkClient);
         } else {
-            //TODO
+            this.index = new DiskAndZkTopicQueueIndex(queueName, fileDir, zkClient);
+
         }
         this.size = new AtomicInteger(index.getWriteCounter() - index.getReadCounter());
         this.writeBlock = new TopicQueueBlock(index, TopicQueueBlock.formatBlockFilePath(queueName, index.getWriteNum(), fileDir));
@@ -178,7 +180,7 @@ public class TopicQueue extends AbstractQueue<byte[]> {
             this.readBlock=new TopicQueueBlock(index,TopicQueueBlock.formatBlockFilePath(queueName,nextReadBlockNum,fileDir));
         index.putReadNum(nextReadBlockNum);
         index.putReadPosition(0);
-        //TODO to delete the read file block
+        TopicQueuePool.toClear(blockPath);
     }
 
     public void sync(){
