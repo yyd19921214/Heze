@@ -18,6 +18,20 @@ public class Cluster {
         return current;
     }
 
+    public static void setCurrent(Group current){
+        Cluster.current=current;
+    }
+
+    public static void addGroup(Group group){
+        MASTER_BROKER_GROUP.add(group);
+        MASTER_BROKER_IP.add(group.getMaster().getHost());
+    }
+
+    public static Group peek(){
+        return MASTER_BROKER_GROUP.peek();
+    }
+
+
     public static Queue<String> getMasterIps(){return MASTER_BROKER_IP;}
 
 

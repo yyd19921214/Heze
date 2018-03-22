@@ -56,21 +56,18 @@ public class NettyServer {
             System.exit(2);
         }
         final ServerConfig config = new ServerConfig(configFile);
-//        start(config);
+        start(config);
 
     }
 
     public void start(Properties properties) {
-//        start(new Ser);
+        start(new ServerConfig(properties));
     }
 
     public void start(ServerConfig config) {
         LOGGER.info("server is starting...");
         int port = PortUtils.checkAvailablePort(config.getPort());
-
         ServerBootstrap b = configServer();
-
-
         try {
             if (StringUtils.isNotBlank(config.getHost())) {
                 f = b.bind(config.getHost(), config.getPort()).sync();
@@ -93,9 +90,6 @@ public class NettyServer {
 
         if (config.getReplicaHost()!=null)
             EmbeddedConsumer.getInstance().start(config);
-
-
-
 
     }
 
@@ -133,11 +127,19 @@ public class NettyServer {
             f.channel().close();
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
+        //TODO embeddedConsumer.getInstance().stop
+        LOGGER.info("Netty server stopped");
+        System.out.println("Netty server stopped");
     }
 
     public void waitForClose() throws InterruptedException {
         f.channel().closeFuture().sync();
 
+    }
+
+
+    public void registerHandler(int handlerId,RequestHandler requestHandler){
+        handlerMap.put(handlerId,requestHandler);
     }
 
 
@@ -147,6 +149,8 @@ public class NettyServer {
             NettyServer.this.stop();
         }
     }
+
+
 
 
     public static void main(String[] args) {

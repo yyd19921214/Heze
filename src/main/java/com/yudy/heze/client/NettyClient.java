@@ -94,7 +94,7 @@ public class NettyClient {
         this.connected = connected;
     }
 
-    public Message write(final Message request){
+    public Message write(final Message request) throws TimeoutException,SendRequestException{
         final ResponseFuture responseFuture=new ResponseFuture(request.getSeqId());
         responseTable.put(responseFuture.getId(),responseFuture);
         Message response=null;

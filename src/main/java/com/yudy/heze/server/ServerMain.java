@@ -1,6 +1,8 @@
 package com.yudy.heze.server;
 
 import com.yudy.heze.config.ServerConfig;
+import com.yudy.heze.server.handlers.FetchRequestHandler;
+import com.yudy.heze.server.handlers.ProducerRequestHandler;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +61,7 @@ public class ServerMain {
                 }
                 i+=2;
             }
-            ServerConfig config=null;
+            ServerConfig config;
             if (StringUtils.isNotBlank(cfg)){
                 config=new ServerConfig(cfg);
             }
@@ -77,8 +79,14 @@ public class ServerMain {
             }
             NettyServer nettyServer=new NettyServer();
             nettyServer.start(config);
-
-
+            nettyServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
+            nettyServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
+            //TODO replica handler register
+            try {
+                nettyServer.waitForClose();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
 
         }
@@ -86,6 +94,7 @@ public class ServerMain {
 
 
     }
+
 
 
 }

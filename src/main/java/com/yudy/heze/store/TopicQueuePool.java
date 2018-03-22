@@ -46,14 +46,14 @@ public class TopicQueuePool {
         if (!fileDir.exists()) {
             fileDir.mkdirs();
         }
-        if (!fileDir.isDirectory() || fileDir.canRead()) {
+        if (!fileDir.isDirectory() || !fileDir.canRead()) {
             throw new IllegalArgumentException(fileDir.getAbsolutePath() + " is not a readable log directory.");
         }
         File fileBackupDir = new File(this.filePath + DATA_BACKUP_PATH);
         if (!fileBackupDir.exists()) {
             fileBackupDir.mkdirs();
         }
-        if (fileBackupDir.isDirectory() || fileBackupDir.canRead()) {
+        if (!fileBackupDir.isDirectory() || !fileBackupDir.canRead()) {
             throw new IllegalArgumentException(fileBackupDir.getAbsolutePath() + " is not a readable log directory.");
         }
         queueMap=scanDir(fileDir,false);
@@ -68,8 +68,7 @@ public class TopicQueuePool {
                 deleteBlockFile();
             }
         },1000L, delay * 1000L);
-
-
+        LOGGER.info("TopicQueuePool has been successfully started");
     }
 
     private void deleteBlockFile() {

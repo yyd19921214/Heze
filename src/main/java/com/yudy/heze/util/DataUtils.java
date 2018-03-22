@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.ByteOrder;
 import java.sql.Timestamp;
@@ -19,18 +20,18 @@ public class DataUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(DataUtils.class);
 
     public static long calculateChecksum(ByteBuf data, int offset, int length) {
-        CRC32 crc32=new CRC32();
+        CRC32 crc32 = new CRC32();
         try {
             if (data.hasArray())
-                crc32.update(data.array(),data.arrayOffset()+offset,length);
+                crc32.update(data.array(), data.arrayOffset() + offset, length);
             else {
-                for (int i=0;i<length;i++){
-                    crc32.update(data.getByte(offset+i));
+                for (int i = 0; i < length; i++) {
+                    crc32.update(data.getByte(offset + i));
                 }
             }
             return crc32.getValue();
 
-        }finally {
+        } finally {
             crc32.reset();
         }
     }
@@ -83,27 +84,73 @@ public class DataUtils {
     }
 
 
-    private static final Gson GSON = new GsonBuilder().registerTypeAdapter(Timestamp.class,new TimestampTypeAdapter()).setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+    private static final Gson GSON = new GsonBuilder().registerTypeAdapter(Timestamp.class, new TimestampTypeAdapter()).setDateFormat("yyyy-MM-dd HH:mm:ss").create();
 
-    public static String brokerGroup2Json(Group group){
+    public static String brokerGroup2Json(Group group) {
         return GSON.toJson(group);
     }
 
-    public static Group json2BrokerGroup(String json){
+    public static Group json2BrokerGroup(String json) {
         return GSON.fromJson(json, Group.class);
     }
 
 
+    public static Object deserialize(byte[] bytes) {
+        ByteArrayInputStream bais = null;
+        try {
+            bais = new ByteArrayInputStream(bytes);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            return ois.readObject();
+        } catch (Exception e) {
+            e.printStackTrace();
 
+        }
+        return null;
+    }
 
+    public static byte[] serialize(Object object){
+        ObjectOutputStream oos=null;
+        ByteArrayOutputStream baos=null;
+        try{
+            baos=new ByteArrayOutputStream();
+            oos=new ObjectOutputStream(baos);
+            oos.writeObject(object);
+            byte[] bytes=baos.toByteArray();
+            return bytes;
+        }catch (Exception e){
+            e.printStackTrace();
 
+        }
+        return null;
+    }
 
-
-
-
-
-
-
-
+    public static void main(String[] args) {
+        Person p=new Person("hi");
+        byte[] bytes=serialize(p);
+        Person p2= (Person) deserialize(bytes);
+        System.out.println(p2.name);
 
     }
+
+
+    static class Person implements Serializable{
+        public String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Person(String name){
+            this.name=name;
+        }
+    }
+
+
+
+}
+
+

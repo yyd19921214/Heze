@@ -112,6 +112,10 @@ public class ServerConfig extends Config {
         return getBoolean("mq.enable.zookeeper", false);
     }
 
+    public String getBrokerGroupName() {
+        return getString("mq.group.name", null);
+    }
+
 
     public static void main(String[] args) {
         String s1 = " ";
