@@ -119,7 +119,7 @@ public class NettyClient {
         }
 
         try {
-            response=responseFuture.waitResponse(10, TimeUnit.SECONDS);
+            response=responseFuture.waitResponse(1000, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

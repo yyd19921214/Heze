@@ -23,6 +23,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
 
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, Message request) throws Exception {
+        System.out.println("receive some data...");
         RequestHandler handler=requestHandlers.get((int)request.getReqHandlerType());
         if (handler==null){
             Message appMessage=new Message();

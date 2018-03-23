@@ -152,6 +152,7 @@ public class Producer {
                     result=true;
                 }
             }catch (com.yudy.heze.exception.TimeoutException|SendRequestException e){
+                e.printStackTrace();
                 client=new NettyClient();
                 errorQueue.addAll(topics);
                 errorFlag=true;

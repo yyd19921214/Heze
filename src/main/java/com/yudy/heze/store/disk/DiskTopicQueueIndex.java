@@ -39,6 +39,7 @@ public class DiskTopicQueueIndex implements TopicQueueIndex {
                 this.indexFile = new RandomAccessFile(file, "rw");
                 byte[] bytes = new byte[8];
                 this.indexFile.read(bytes, 0, 8);
+                System.out.println(new String(bytes));
                 if (!MAGIC.equals(new String(bytes))) {
                     throw new IllegalArgumentException("version mismatch");
                 }
@@ -159,7 +160,7 @@ public class DiskTopicQueueIndex implements TopicQueueIndex {
 
     @Override
     public void putReadCounter(int readCounter) {
-        this.index.position(readCounter);
+        this.index.position(READ_CNT_OFFSET);
         this.index.putInt(readCounter);
         this.readCounter = readCounter;
     }

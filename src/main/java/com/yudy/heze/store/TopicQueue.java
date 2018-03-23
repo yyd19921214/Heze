@@ -2,6 +2,7 @@ package com.yudy.heze.store;
 
 import com.yudy.heze.network.Message;
 import com.yudy.heze.store.disk.DiskAndZkTopicQueueIndex;
+import com.yudy.heze.store.disk.DiskTopicQueueIndex;
 import com.yudy.heze.store.zk.ZkTopicQueueReadIndex;
 import com.yudy.heze.zk.ZkClient;
 import io.netty.buffer.ByteBuf;
@@ -37,11 +38,16 @@ public class TopicQueue extends AbstractQueue<byte[]> {
     public TopicQueue(String queueName, String fileDir, ZkClient zkClient, boolean backup) {
         this.queueName = queueName;
         this.fileDir = fileDir;
+        this.readLock=new ReentrantLock();
+        this.writeLock=new ReentrantLock();
         if (backup && zkClient != null) {
             // 这是一个backuo队列
             this.index = new ZkTopicQueueReadIndex(queueName,zkClient);
-        } else {
+        }else if(zkClient!=null){
             this.index = new DiskAndZkTopicQueueIndex(queueName, fileDir, zkClient);
+        }
+        else {
+            this.index = new DiskTopicQueueIndex(queueName,fileDir);
 
         }
         this.size = new AtomicInteger(index.getWriteCounter() - index.getReadCounter());
@@ -78,7 +84,11 @@ public class TopicQueue extends AbstractQueue<byte[]> {
             writeBlock.write(bytes);
             size.incrementAndGet();
             return true;
-        }finally {
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+        finally {
             writeLock.unlock();
         }
 
@@ -95,7 +105,11 @@ public class TopicQueue extends AbstractQueue<byte[]> {
             if (bytes!=null)
                 size.decrementAndGet();
             return bytes;
-        }finally {
+        }catch (Exception e){
+            e.printStackTrace();
+            return null;
+        }
+        finally {
             readLock.unlock();
         }
 
