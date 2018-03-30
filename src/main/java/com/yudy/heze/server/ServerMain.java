@@ -3,6 +3,7 @@ package com.yudy.heze.server;
 import com.yudy.heze.config.ServerConfig;
 import com.yudy.heze.server.handlers.FetchRequestHandler;
 import com.yudy.heze.server.handlers.ProducerRequestHandler;
+import com.yudy.heze.server.handlers.ReplicaRequestHandler;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +82,7 @@ public class ServerMain {
             nettyServer.start(config);
             nettyServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
             nettyServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
-//            nettyServer.registerHandler(RequestHandler.REPLICA);
+            nettyServer.registerHandler(RequestHandler.REPLICA,new ReplicaRequestHandler(config));
             //TODO replica handler register
             try {
                 nettyServer.waitForClose();

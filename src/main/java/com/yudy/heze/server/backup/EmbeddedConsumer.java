@@ -35,7 +35,7 @@ public class EmbeddedConsumer {
 
     private EmbeddedConsumer(){}
 
-    public EmbeddedConsumer getInstance(){
+    public static EmbeddedConsumer getInstance(){
         return INSTANCE;
     }
 

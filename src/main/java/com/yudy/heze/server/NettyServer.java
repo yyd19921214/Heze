@@ -89,9 +89,7 @@ public class NettyServer {
         TopicQueuePool.startup(zkClient,config);
 
         if (config.getReplicaHost()!=null){
-            //            EmbeddedConsumer.start(config);
-            System.out.println();
-//            com.yudy.heze.server.backup.EmbeddedConsumer.getInstance();
+            EmbeddedConsumer.getInstance().start(config);
         }
 
     }
