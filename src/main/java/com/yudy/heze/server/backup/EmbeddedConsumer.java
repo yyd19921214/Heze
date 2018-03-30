@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -33,7 +32,6 @@ public class EmbeddedConsumer {
     private String replicaHost;
     private int port;
     private NettyClient nettyClient;
-    private Set<String> topics=new HashSet<>();
 
     private EmbeddedConsumer(){}
 
@@ -46,8 +44,8 @@ public class EmbeddedConsumer {
         port=config.getPort();
         if (StringUtils.isNotBlank(replicaHost)){
             nettyClient=new NettyClient();
-            //todo add scheduler
-//            this.scheduler.scheduleWithRate()
+            this.scheduler.scheduleWithRate(new ReplicaConsumerRunnable(),30*1000,config.getReplicaFetchInterval()*1000L);
+            LOGGER.info("Embedded consumer started, replica host:" + replicaHost.toString());
         }
     }
 
@@ -104,15 +102,12 @@ public class EmbeddedConsumer {
                                     BackupQueue backupQueue=BackupQueuePool.getBackupQueueFromPool(topic.getTopic());
                                     backupQueue.offer(DataUtils.serialize(topic));
                                 }
-
                             }
-
                         }
                     }
                     if (response.getBody().length>0){
                         LOGGER.info("fetch data from master broker ,size:"+response.bodyLength());
                     }
-
                 }catch (SendRequestException e) {
                     INSTANCE.nettyClient.setConnected(false);
                     LOGGER.error("Embedded consumer flush topic error.", e);
