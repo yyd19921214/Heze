@@ -118,6 +118,22 @@ public class ZkUtils {
         }
     }
 
+    public static String createEphemeralPath(ZkClient zkClient,String path,String data){
+        String pathCT;
+        try{
+            pathCT=zkClient.createEphemeralSequential(path,getBytes(data));
+        }catch (ZkNoNodeException e){
+            createParentPath(zkClient,path);
+            pathCT=zkClient.createEphemeralSequential(path,getBytes(data));
+        }
+        return pathCT;
+    }
+
+    public static String createEphemeralPathExpectConflict(ZkClient zkClient,String path,String data){
+        createEphemeralPath(zkClient,path,data);
+
+    }
+
 
 
 
