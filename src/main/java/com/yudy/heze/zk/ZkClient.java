@@ -166,7 +166,7 @@ public class ZkClient implements Watcher, Closeable {
         create(path, data, CreateMode.EPHEMERAL);
     }
 
-    public void createEphemeralSequential(String path, byte[] data) {
+    public String createEphemeralSequential(String path, byte[] data) {
         create(path, data, CreateMode.EPHEMERAL_SEQUENTIAL);
     }
 
