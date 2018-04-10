@@ -37,6 +37,8 @@ public class Cluster {
         MASTER_BROKER_GROUP.clear();
         MASTER_BROKER_IP.clear();
         SLAVE_BROKER.clear();
+
+        
     }
 
 
