@@ -1,6 +1,7 @@
 package com.yudy.heze.util;
 
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import com.yudy.heze.cluster.Cluster;
 import com.yudy.heze.cluster.Group;
 import com.yudy.heze.exception.ZkNoNodeException;
 import com.yudy.heze.server.ServerRegister;
@@ -16,35 +17,35 @@ import java.util.*;
 public class ZkUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(ZkUtils.class);
 
-    public static final String ZK_MQ_BASE="/HEZEMQ";
+    public static final String ZK_MQ_BASE = "/HEZEMQ";
 
-    public static void makeSurePersistentPathExist(ZkClient zkClient,String path){
-        if (!zkClient.exists(path,true)){
+    public static void makeSurePersistentPathExist(ZkClient zkClient, String path) {
+        if (!zkClient.exists(path, true)) {
             try {
-                zkClient.createPersistent(path,true);
-            }catch (Exception e){
+                zkClient.createPersistent(path, true);
+            } catch (Exception e) {
                 zkClient.delete(path);
-                zkClient.createPersistent(path,true);
+                zkClient.createPersistent(path, true);
             }
         }
     }
 
     public static List<String> getChildrenParentMayNotExist(ZkClient zkClient, String path) {
-        try{
+        try {
             return zkClient.getChildren(path);
-        }catch (ZkNoNodeException e){
+        } catch (ZkNoNodeException e) {
             return null;
         }
     }
 
-    public static String readData(ZkClient zkClient,String path){
+    public static String readData(ZkClient zkClient, String path) {
         return fromByte(zkClient.readData(path));
     }
 
-    public static String readDataMaybeNull(ZkClient zkClient,String path){
-        try{
+    public static String readDataMaybeNull(ZkClient zkClient, String path) {
+        try {
             return fromByte(zkClient.readData(path));
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
@@ -56,16 +57,16 @@ public class ZkUtils {
         }
     }
 
-    public static String fromByte(byte[] bytes){
-        return fromByte(bytes,"utf-8");
+    public static String fromByte(byte[] bytes) {
+        return fromByte(bytes, "utf-8");
     }
 
 
-    public static String fromByte(byte[] bytes,String encode){
-        if (bytes==null)
+    public static String fromByte(byte[] bytes, String encode) {
+        if (bytes == null)
             return null;
         try {
-            String s=new String(bytes,encode);
+            String s = new String(bytes, encode);
             return s;
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -73,12 +74,12 @@ public class ZkUtils {
         return null;
     }
 
-    public static byte[] getBytes(String s){
-        return getBytes(s,"utf-8");
+    public static byte[] getBytes(String s) {
+        return getBytes(s, "utf-8");
     }
 
-    public static byte[] getBytes(String s,String encode){
-        if (s==null)
+    public static byte[] getBytes(String s, String encode) {
+        if (s == null)
             return null;
         try {
             return s.getBytes(encode);
@@ -87,44 +88,34 @@ public class ZkUtils {
         }
     }
 
-    public static void getCluster(ZkClient zkClient){
+    public static void getCluster(ZkClient zkClient) {
         try {
-            if (zkClient.getZooKeeper().getState().isAlive()){
-                List<String> allGroupsName= ZkUtils.getChildrenParentMayNotExist(zkClient, ServerRegister.ZK_BROKER_GROUP);
-                Collections.sort(allGroupsName);
-                if (allGroupsName!=null){
-                    Map<String,String> slaveIp=new HashMap<>();
-                    for (String group:allGroupsName){
-                        String jsonGroup=ZkUtils.readData(zkClient,ServerRegister.ZK_BROKER_GROUP+"/"+group);
-                        if (StringUtils.isNotBlank(jsonGroup)){
-                            Group groupObj=DataUtils.json2BrokerGroup(jsonGroup);
-                            if (groupObj.getSlaveOf()!=null){
-                                //TODO
-                                //verify if it need reversed???
-                                slaveIp.put(groupObj.getMaster().getHost(),groupObj.getSlaveOf().getHost());
-                            }
-
+            if (zkClient.getZooKeeper().getState().isAlive()) {
+                List<String> allGroupsName = ZkUtils.getChildrenParentMayNotExist(zkClient, ServerRegister.ZK_BROKER_GROUP);
+                if (allGroupsName != null) {
+                    List<Group> allGroup = new ArrayList<>();
+                    Map<String, String> slaveIp = new HashMap<>();
+                    for (String group : allGroupsName) {
+                        String jsonGroup = ZkUtils.readData(zkClient, ServerRegister.ZK_BROKER_GROUP + "/" + group);
+                        if (StringUtils.isNotBlank(jsonGroup)) {
+                            Group groupObj = DataUtils.json2BrokerGroup(jsonGroup);
+                            allGroup.add(groupObj);
                         }
                     }
-                    //TODO
-                    List<Group> noSlave=new ArrayList<>();
-//                    for (Group group:)
+                    Cluster.clear();
+                    allGroup.forEach(group -> {
+                        if (group.getSlaveOf() != null) {
+                            group.getMaster().setShost(group.getSlaveOf().getHost());
+                        }
+                        Cluster.addGroup(group);
+                    });
                 }
             }
-
-
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
+            LOGGER.error("get cluster error", e);
         }
     }
-
-
-
-
-
-
-
-
 
 
 }

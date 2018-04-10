@@ -22,8 +22,9 @@ public class ServerRegister {
         this.config=config;
         if (zkClient==null){
             String authString=config.getZkUsername()+":"+config.getZkPassword();
-            zkClient=new ZkClient()
+            zkClient=new ZkClient(config.getZkConnect(),authString,config.getZkSessionTimeoutMs(),config.getZkConnectionTimeoutMs());
         }
+
 
 
 
@@ -33,4 +34,6 @@ public class ServerRegister {
         return null;
 
     }
+
+
 }

@@ -83,7 +83,6 @@ public class ServerMain {
             nettyServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
             nettyServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
             nettyServer.registerHandler(RequestHandler.REPLICA,new ReplicaRequestHandler(config));
-            //TODO replica handler register
             try {
                 nettyServer.waitForClose();
             } catch (InterruptedException e) {

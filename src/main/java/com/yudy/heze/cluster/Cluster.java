@@ -34,5 +34,13 @@ public class Cluster {
 
     public static Queue<String> getMasterIps(){return MASTER_BROKER_IP;}
 
+    public static void clear(){
+        MASTER_BROKER_GROUP.clear();
+        MASTER_BROKER_IP.clear();
+        SLAVE_BROKER.clear();
+    }
+
+
+
 
 }
