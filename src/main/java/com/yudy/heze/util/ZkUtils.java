@@ -24,8 +24,10 @@ public class ZkUtils {
             try {
                 zkClient.createPersistent(path, true);
             } catch (Exception e) {
+                e.printStackTrace();
                 zkClient.delete(path);
                 zkClient.createPersistent(path, true);
+//                e.printStackTrace();
             }
         }
     }
