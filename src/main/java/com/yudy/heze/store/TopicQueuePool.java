@@ -1,6 +1,7 @@
 package com.yudy.heze.store;
 
 import com.yudy.heze.config.ServerConfig;
+import com.yudy.heze.server.backup.BackupQueuePool;
 import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.zk.ZkClient;
 import org.apache.commons.lang.ArrayUtils;
@@ -59,14 +60,9 @@ public class TopicQueuePool {
         queueMap=scanDir(fileDir,false);
         long delay = config.getDataPersistenceInterval();
         ZK_SYNC_DATA_PERSISTENCE_INTERVAL = (int) (config.getZKDataPersistenceInterval() / config.getDataPersistenceInterval());
-        scheduler.scheduleWithRate(new Runnable() {
-            @Override
-            public void run() {
-                for (TopicQueue queue : queueMap.values()) {
-                    queue.sync();
-                }
-                deleteBlockFile();
-            }
+        scheduler.scheduleWithRate(()-> {
+            queueMap.values().forEach(TopicQueue::sync);
+            deleteBlockFile();
         },1000L, delay * 1000L);
         LOGGER.info("TopicQueuePool has been successfully started");
     }
@@ -112,7 +108,8 @@ public class TopicQueuePool {
     public synchronized static void startup(ZkClient zkClient, ServerConfig config) {
         if (INSTANCE == null)
             INSTANCE = new TopicQueuePool(zkClient, config);
-        //TODO backupQueuePool
+        //todo
+//        BackupQueuePool.
     }
 
     public synchronized static void startup(ServerConfig config) {

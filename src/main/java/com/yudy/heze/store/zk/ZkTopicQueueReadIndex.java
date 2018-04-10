@@ -229,7 +229,6 @@ public class ZkTopicQueueReadIndex implements TopicQueueIndex {
                 zkClient.createEphemeral(path, null);
             }
         }
-//        if ()
 
     }
 

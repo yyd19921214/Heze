@@ -2,6 +2,7 @@ package com.yudy.heze.server.backup;
 
 import com.yudy.heze.store.disk.DiskTopicQueueIndex;
 import com.yudy.heze.store.zk.ZkTopicQueueReadIndex;
+import com.yudy.heze.zk.ZkClient;
 
 import java.util.AbstractQueue;
 import java.util.Iterator;
@@ -26,6 +27,14 @@ public class BackupQueue extends AbstractQueue<byte[]>{
 
     public ZkTopicQueueReadIndex getReadIndex() {
         return readIndex;
+    }
+
+    public BackupQueue(String queueName, String fileDir, ZkClient zkClient) {
+        this.queueName = queueName;
+        this.fileDir = fileDir;
+        this.readLock = new ReentrantLock();
+        this.writeLock = new ReentrantLock();
+
     }
 
     @Override

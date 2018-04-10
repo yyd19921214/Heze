@@ -66,7 +66,7 @@ public class NettyServer {
 
     public void start(ServerConfig config) {
         LOGGER.info("server is starting...");
-        int port = PortUtils.checkAvailablePort(config.getPort());
+        PortUtils.checkAvailablePort(config.getPort());
         ServerBootstrap b = configServer();
         try {
             if (StringUtils.isNotBlank(config.getHost())) {

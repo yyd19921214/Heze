@@ -10,9 +10,12 @@ import org.apache.zookeeper.ZKUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import static com.yudy.heze.util.ZkUtils.ZK_MQ_BASE;
 
-public class ServerRegister {
+public class ServerRegister implements Closeable{
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerRegister.class);
 
@@ -24,15 +27,14 @@ public class ServerRegister {
 
     public ZkClient startup(ServerConfig config) {
         LOGGER.info("connecting to zookeeper: " + config.getZkConnect());
-
-        this.config=config;
-        if (zkClient==null){
-            String authString=config.getZkUsername()+":"+config.getZkPassword();
-            zkClient=new ZkClient(config.getZkConnect(),authString,config.getZkSessionTimeoutMs(),config.getZkConnectionTimeoutMs());
+        this.config = config;
+        if (zkClient == null) {
+            String authString = config.getZkUsername() + ":" + config.getZkPassword();
+            zkClient = new ZkClient(config.getZkConnect(), authString, config.getZkSessionTimeoutMs(), config.getZkConnectionTimeoutMs());
         }
-        //todo
-        return null;
-
+        registerBrokerGroupInZk();
+        ZkUtils.getCluster(zkClient);
+        return zkClient;
     }
 
     private void registerBrokerGroupInZk() {
@@ -41,15 +43,19 @@ public class ServerRegister {
         LOGGER.info("registering broker group" + zkPath);
         Group brokerGroup = new Group(config.getBrokerGroupName(), config.getHost(), config.getPort());
         zkPath += "/" + brokerGroup.getName();
-        String jsonGroup= DataUtils.brokerGroup2Json(brokerGroup);
-        //todo implement getCluster
+        String jsonGroup = DataUtils.brokerGroup2Json(brokerGroup);
         ZkUtils.getCluster(zkClient);
-        if (!Cluster.getMasterIps().contains(config.getHost())){
-//            ZkUtils.
+        if (!Cluster.getMasterIps().contains(config.getHost())) {
+            ZkUtils.createEphemeralPathExpectConflict(zkClient, zkPath, jsonGroup);
+            Cluster.setCurrent(brokerGroup);
         }
-
-
     }
 
-
+    @Override
+    public void close() throws IOException {
+        if (zkClient!=null){
+            LOGGER.info("closing zkclient now....");
+            zkClient.close();
+        }
+    }
 }

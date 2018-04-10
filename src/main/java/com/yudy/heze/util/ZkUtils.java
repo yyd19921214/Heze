@@ -94,7 +94,6 @@ public class ZkUtils {
                 List<String> allGroupsName = ZkUtils.getChildrenParentMayNotExist(zkClient, ServerRegister.ZK_BROKER_GROUP);
                 if (allGroupsName != null) {
                     List<Group> allGroup = new ArrayList<>();
-                    Map<String, String> slaveIp = new HashMap<>();
                     for (String group : allGroupsName) {
                         String jsonGroup = ZkUtils.readData(zkClient, ServerRegister.ZK_BROKER_GROUP + "/" + group);
                         if (StringUtils.isNotBlank(jsonGroup)) {
@@ -129,8 +128,7 @@ public class ZkUtils {
     }
 
     public static String createEphemeralPathExpectConflict(ZkClient zkClient,String path,String data){
-        createEphemeralPath(zkClient,path,data);
-
+        return createEphemeralPath(zkClient,path,data);
     }
 
 
