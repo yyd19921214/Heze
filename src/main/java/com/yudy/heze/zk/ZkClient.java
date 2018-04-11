@@ -61,75 +61,9 @@ public class ZkClient implements Watcher, Closeable {
     public ZkClient(ZkConnection zkConnection, int connectionTimeout) {
         this.zkConnection = zkConnection;
         connect(connectionTimeout, this);
+        System.out.println("connected.....");
     }
 
-    public List<String> subscribeChildChanges(String path, ZkChildListener listener) {
-        synchronized (_childListener) {
-            Set<ZkChildListener> listeners = _childListener.get(path);
-            if (listeners == null) {
-                listeners = new CopyOnWriteArraySet<>();
-                _childListener.put(path, listeners);
-            }
-
-            listeners.add(listener);
-        }
-        return watchForChilds(path);
-    }
-
-    public void unsubscribeChildChanges(String path, ZkChildListener listener) {
-        synchronized (_childListener) {
-            Set<ZkChildListener> listeners = _childListener.get(path);
-            if (listeners != null) {
-                listeners.remove(listener);
-            }
-
-        }
-    }
-
-    public void subscribeDataChanges(String path, ZkDataListener listener) {
-        synchronized (_dataListener) {
-            Set<ZkDataListener> listeners = _dataListener.get(path);
-            if (listeners == null) {
-                listeners = new CopyOnWriteArraySet<ZkDataListener>();
-                _dataListener.put(path, listeners);
-            }
-            listeners.add(listener);
-        }
-
-        watchForData(path);
-        LOG.debug("Subscribed data changes for " + path);
-    }
-
-    public void unsubscribeDataChanges(String path, ZkDataListener listener) {
-        synchronized (_dataListener) {
-            Set<ZkDataListener> listeners = _dataListener.get(path);
-            if (listeners != null)
-                listeners.remove(listener);
-
-        }
-    }
-
-    public void subscribeStateChanges(final ZkStateListener listener) {
-        _stateListener.add(listener);
-    }
-
-    public void unsubscribeStateChanges(ZkStateListener listener) {
-        _stateListener.remove(listener);
-    }
-
-    public void unsubscribeAll() {
-        _childListener.clear();
-        _dataListener.clear();
-        _stateListener.clear();
-    }
-
-    public void createPersistent(String path) {
-        createPersistent(path, false);
-    }
-
-    public void createPersistent(String path, byte[] data) {
-        create(path, data, CreateMode.PERSISTENT);
-    }
 
 
     public void createPersistent(String path, boolean createParents) {
@@ -149,9 +83,6 @@ public class ZkClient implements Watcher, Closeable {
         }
     }
 
-    public void createPersistentSequential(String path, byte[] data) {
-        create(path, data, CreateMode.PERSISTENT_SEQUENTIAL);
-    }
 
 
     public String create(final String path, byte[] data, final CreateMode mode) {
@@ -241,16 +172,6 @@ public class ZkClient implements Watcher, Closeable {
         }
     }
 
-    public int countChildren(String path) {
-        Stat stat = new Stat();
-        try {
-            this.readData(path, stat, true);
-        } catch (ZkNoNodeException e) {
-            e.printStackTrace();
-            return -1;
-        }
-        return stat.getNumChildren();
-    }
 
 
     public boolean exists(final String path, final boolean watch) {
@@ -316,19 +237,6 @@ public class ZkClient implements Watcher, Closeable {
         return false;
     }
 
-    public boolean deleteRecursive(String path) {
-        List<String> children;
-        try {
-            children = getChildren(path, false);
-        } catch (ZkNoNodeException e) {
-            return true;
-        }
-        for (String child : children) {
-            if (!deleteRecursive(path + "/" + child))
-                return false;
-        }
-        return delete(path);
-    }
 
     public boolean delete(final String path) {
         return retryUntilConnected(() -> {
@@ -392,27 +300,6 @@ public class ZkClient implements Watcher, Closeable {
         }
     }
 
-    public boolean waitUntilExists(String path, TimeUnit timeUnit, long time) throws ZkInterruptedException {
-        Date timeout = new Date(System.currentTimeMillis() + timeUnit.toMillis(time));
-        LOG.debug("wait until znode '" + path + "' become avaiable");
-        if (exists(path))
-            return true;
-        acquireEventLock();
-        try {
-            while (!exists(path, true)) {
-                boolean signal = getEventLock().getZNodeEventCondition().awaitUntil(timeout);
-                if (!signal) {
-                    return false;
-                }
-            }
-            return true;
-
-        } catch (InterruptedException e) {
-            throw new ZkInterruptedException(e);
-        } finally {
-            getEventLock().unlock();
-        }
-    }
 
 
     public boolean waitUntilConnected() throws ZkInterruptedException {
@@ -464,9 +351,11 @@ public class ZkClient implements Watcher, Closeable {
             try {
                 return callable.call();
             } catch (KeeperException.ConnectionLossException e) {
+                e.printStackTrace();
                 Thread.yield();
                 waitUntilConnected();
             } catch (KeeperException.SessionExpiredException e) {
+                e.printStackTrace();
                 Thread.yield();
                 waitUntilConnected();
             } catch (KeeperException e) {
@@ -474,7 +363,7 @@ public class ZkClient implements Watcher, Closeable {
             } catch (InterruptedException e) {
                 throw new ZkInterruptedException(e);
             } catch (Exception e) {
-                //TODO
+                e.printStackTrace();
             }
         }
 
@@ -527,39 +416,7 @@ public class ZkClient implements Watcher, Closeable {
         return retryUntilConnected(() -> zkConnection.writeData(path, data, -1));
     }
 
-    public void cas(String path,DataUpdater updater){
-        Stat stat=new Stat();
-        boolean retry;
-        do {
-            retry=false;
-            try {
-                byte[] old=readData(path,stat);
-                byte[] newData=updater.update(old);
-                writeData(path,newData,stat.getVersion());
-            }catch (ZkBadVersionException e){
-                retry=true;
-            }
-        }while (retry);
-    }
 
-    public void watchForData(final String path) {
-        retryUntilConnected(() -> zkConnection.exists(path, true));
-    }
-
-
-    public List<String> watchForChilds(final String path) {
-        return retryUntilConnected(
-                () -> {
-                    exists(path, true);
-                    try {
-                        return getChildren(path, true);
-                    } catch (ZkNoNodeException e) {
-
-                    }
-                    return null;
-                }
-        );
-    }
 
 
     public synchronized void connect(final long maxMsToWaitUntilConnected, Watcher watcher) {
@@ -573,7 +430,7 @@ public class ZkClient implements Watcher, Closeable {
             _eventThread.start();
             zkConnection.connect(watcher);
             LOG.debug("Awaiting connection to Zookeeper server: " + maxMsToWaitUntilConnected);
-            if (waitUntilConnected(maxMsToWaitUntilConnected, TimeUnit.MILLISECONDS))
+            if (!waitUntilConnected(maxMsToWaitUntilConnected, TimeUnit.MILLISECONDS))
                 LOG.error(String.format("Unable to connect to zookeeper server[%s] within timeout %dms", zkConnection.getServers(), maxMsToWaitUntilConnected));
             started = true;
         } catch (InterruptedException e) {
@@ -587,18 +444,6 @@ public class ZkClient implements Watcher, Closeable {
         }
     }
 
-    public long getCreationTime(String path) {
-        try {
-            getEventLock().lockInterruptibly();
-            return zkConnection.getCreateTime(path);
-        } catch (KeeperException e) {
-            throw ZkException.create(e);
-        } catch (InterruptedException e) {
-            throw new ZkInterruptedException(e);
-        } finally {
-            getEventLock().unlock();
-        }
-    }
 
 
     public boolean getShutdownTrigger() {

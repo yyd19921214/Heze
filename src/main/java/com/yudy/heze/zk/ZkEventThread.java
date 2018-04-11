@@ -68,13 +68,16 @@ public class ZkEventThread extends Thread {
                 try {
                     event.run();
                 }catch (InterruptedException e) {
+                    e.printStackTrace();
                     shutdown();
                 } catch (Throwable e) {
+                    e.printStackTrace();
                     LOG.error("Error handling event " + event, e);
                 }
                 LOG.debug("Delivering event #" + eventId + " " + event);
             }
         }catch (InterruptedException e){
+            e.printStackTrace();
 
         }
     }
