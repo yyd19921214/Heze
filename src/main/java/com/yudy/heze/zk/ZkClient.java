@@ -9,10 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -63,8 +60,38 @@ public class ZkClient implements Watcher, Closeable {
 
     public ZkClient(ZkConnection zkConnection, int connectionTimeout) {
         this.zkConnection = zkConnection;
-        connect(connectionTimeout, this);
-        System.out.println("connected.....");
+        boolean _connect=connect(connectionTimeout, this);
+        if (_connect)
+            System.out.println("connected.....");
+    }
+
+    public List<String> subscribeChildChanges(String path, ZkChildListener listener) {
+        synchronized (_childListener) {
+            Set<ZkChildListener> listeners = _childListener.get(path);
+            if (listeners == null) {
+                listeners = new CopyOnWriteArraySet<>();
+                _childListener.put(path, listeners);
+            }
+            listeners.add(listener);
+        }
+        return watchForChilds(path);
+    }
+
+    public List<String> watchForChilds(final String path) {
+        if (_zooKeeperEventThread != null && Thread.currentThread() == _zooKeeperEventThread) {
+            throw new IllegalArgumentException("Must not be done in the zookeeper event thread.");
+        }
+        return retryUntilConnected(()->{
+            exists(path,true);
+            List<String> children=new ArrayList<>();
+            try{
+                children=getChildren(path,true);
+            }catch (ZkNoNodeException e){
+                //just ignore while the node is empty
+                System.out.println("节点尚未完全建立");
+            }
+            return children;
+        });
     }
 
 

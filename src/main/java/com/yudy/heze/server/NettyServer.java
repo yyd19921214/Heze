@@ -128,7 +128,7 @@ public class NettyServer {
             f.channel().close();
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
-        //TODO embeddedConsumer.getInstance().stop
+        EmbeddedConsumer.getInstance().stop();
         LOGGER.info("Netty server stopped");
         System.out.println("Netty server stopped");
     }

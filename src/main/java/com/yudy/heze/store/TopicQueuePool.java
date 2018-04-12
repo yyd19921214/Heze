@@ -108,8 +108,8 @@ public class TopicQueuePool {
     public synchronized static void startup(ZkClient zkClient, ServerConfig config) {
         if (INSTANCE == null)
             INSTANCE = new TopicQueuePool(zkClient, config);
-        //todo
-//        BackupQueuePool.
+
+        BackupQueuePool.startup(zkClient, config);
     }
 
     public synchronized static void startup(ServerConfig config) {

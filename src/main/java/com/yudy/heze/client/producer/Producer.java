@@ -117,7 +117,7 @@ public class Producer {
 
     }
 
-    public boolean send(Topic[] topics){
+    private boolean send(Topic[] topics){
         return send(Arrays.asList(topics));
     }
 
@@ -134,7 +134,7 @@ public class Producer {
         return send(topics);
     }
 
-    public boolean send(List<Topic> topics){
+    private boolean send(List<Topic> topics){
         boolean result=false;
         if (reconnect()){
             Message request=Message.newRequestMessage();
