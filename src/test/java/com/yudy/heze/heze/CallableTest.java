@@ -7,12 +7,30 @@ public class CallableTest {
 
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        FutureTask<Integer> f=new FutureTask<Integer>(new CallableDemo());
-        ExecutorService exe = Executors.newFixedThreadPool(2);
-        exe.submit(f);
-        exe.shutdown();
-        exe.awaitTermination(Integer.MAX_VALUE,TimeUnit.MILLISECONDS);
-        System.out.println(f.get());
+        String s="0000000056";
+        System.out.println(Integer.parseInt(s));
+
+//        Thread t=new Thread(()->{
+//            int i=0;
+//           while (i++<10000){
+//               System.out.println("hello");
+//           }
+//        });
+//        t.start();
+//        Thread.currentThread().interrupt();
+//        t.join(1000);
+//
+//        System.out.println("world");
+
+//        t.interrupt();
+//        t.join(1000);
+
+//        FutureTask<Integer> f=new FutureTask<Integer>(new CallableDemo());
+//        ExecutorService exe = Executors.newFixedThreadPool(2);
+//        exe.submit(f);
+//        exe.shutdown();
+//        exe.awaitTermination(Integer.MAX_VALUE,TimeUnit.MILLISECONDS);
+//        System.out.println(f.get());
 
     }
 

@@ -18,11 +18,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.zookeeper.CreateMode.PERSISTENT;
+import static org.apache.zookeeper.KeeperException.Code.NONODE;
+
 public class ZkClient implements Watcher, Closeable {
 
-    private static final int DEFAULT_CONNECTION_TIMEOUT = 10000;
+    private static final int DEFAULT_CONNECTION_TIMEOUT = 10000000;
 
-    private static final int DEFAULT_SESSION_TIMEOUT = 30000;
+    private static final int DEFAULT_SESSION_TIMEOUT = 30000000;
 
     private static final Logger LOG = LoggerFactory.getLogger(ZkClient.class);
 
@@ -66,42 +69,44 @@ public class ZkClient implements Watcher, Closeable {
 
 
 
-    public void createPersistent(String path, boolean createParents) {
+    public String createPersistent(String path, boolean createParents)  {
         try {
-            create(path, null, CreateMode.PERSISTENT);
-
+            String s=create(path, null, CreateMode.PERSISTENT);
+            return s;
         } catch (ZkNodeExistsException e) {
-            if (!createParents)
+            if (!createParents) {
                 throw e;
+            }
         } catch (ZkNoNodeException e) {
             if (!createParents) {
                 throw e;
             }
-            String parentDir = path.substring(0, path.lastIndexOf("/"));
+            String parentDir = path.substring(0, path.lastIndexOf('/'));
             createPersistent(parentDir, createParents);
-            createPersistent(path, createParents);
+            return createPersistent(path, createParents);
         }
+        return null;
+
     }
 
-
-
-    public String create(final String path, byte[] data, final CreateMode mode) {
-        if (path == null || path.length() == 0)
-            throw new NullPointerException("path can not be null");
-        final byte[] bytes = data;
-
-        return retryUntilConnected(() -> zkConnection.create(path, data, mode));
-    }
-
-    public void createEphemeral(String path, byte[] data) {
-        create(path, data, CreateMode.EPHEMERAL);
+    public String createEphemeral(String path, byte[] data) {
+        String s=create(path, data, CreateMode.EPHEMERAL);
+        return s;
     }
 
     public String createEphemeralSequential(String path, byte[] data) {
-        return create(path, data, CreateMode.EPHEMERAL_SEQUENTIAL);
+        String s=create(path, data, CreateMode.EPHEMERAL_SEQUENTIAL);
+        return s;
     }
 
-    public ZkLock getEventLock() {
+    private String create(final String path, byte[] data, final CreateMode mode) {
+        if (path == null || path.length() == 0)
+            throw new NullPointerException("path can not be null");
+        return retryUntilConnected(() -> zkConnection.create(path, data, mode));
+    }
+
+
+    private ZkLock getEventLock() {
         return _zkEventLock;
     }
 
@@ -175,7 +180,7 @@ public class ZkClient implements Watcher, Closeable {
 
 
     public boolean exists(final String path, final boolean watch) {
-        return retryUntilConnected(() -> zkConnection.exists(path, true));
+        return retryUntilConnected(() -> zkConnection.exists(path, watch));
     }
 
     public boolean exists(final String path) {
@@ -238,12 +243,7 @@ public class ZkClient implements Watcher, Closeable {
     }
 
 
-    public boolean delete(final String path) {
-        return retryUntilConnected(() -> {
-            zkConnection.delete(path);
-            return null;
-        });
-    }
+
 
     private void processDataOrChildChange(WatchedEvent watchedEvent) {
         String path = watchedEvent.getPath();
@@ -300,13 +300,19 @@ public class ZkClient implements Watcher, Closeable {
         }
     }
 
+    public boolean delete(final String path) {
+        return retryUntilConnected(() -> {
+            zkConnection.delete(path);
+            return true;
+        });
+    }
 
 
-    public boolean waitUntilConnected() throws ZkInterruptedException {
+    private boolean waitUntilConnected() throws ZkInterruptedException {
         return waitUntilConnected(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
 
-    public boolean waitUntilConnected(long waitTime, TimeUnit timeUnit) {
+    private boolean waitUntilConnected(long waitTime, TimeUnit timeUnit) {
         return waitForKeeperState(KeeperState.SyncConnected, waitTime, timeUnit);
 
     }
@@ -334,31 +340,24 @@ public class ZkClient implements Watcher, Closeable {
     }
 
 
-    private void acquireEventLock() {
-        try {
-            getEventLock().lockInterruptibly();
-        } catch (InterruptedException e) {
-            throw new ZkInterruptedException(e);
-        }
-    }
 
-
-    public <E> E retryUntilConnected(Callable<E> callable) {
+    private <E> E retryUntilConnected(Callable<E> callable) {
         if (_zooKeeperEventThread != null && Thread.currentThread() == _zooKeeperEventThread) {
             throw new IllegalArgumentException("Must not be done in the zookeeper event thread.");
         }
         while (true) {
             try {
                 return callable.call();
-            } catch (KeeperException.ConnectionLossException e) {
+
+            }catch (KeeperException.SessionExpiredException e) {
                 e.printStackTrace();
                 Thread.yield();
                 waitUntilConnected();
-            } catch (KeeperException.SessionExpiredException e) {
-                e.printStackTrace();
+            }
+            catch (KeeperException.ConnectionLossException e) {
                 Thread.yield();
                 waitUntilConnected();
-            } catch (KeeperException e) {
+            }  catch (KeeperException e) {
                 throw ZkException.create(e);
             } catch (InterruptedException e) {
                 throw new ZkInterruptedException(e);
@@ -417,11 +416,9 @@ public class ZkClient implements Watcher, Closeable {
     }
 
 
-
-
-    public synchronized void connect(final long maxMsToWaitUntilConnected, Watcher watcher) {
+    public synchronized boolean connect(final long maxMsToWaitUntilConnected, Watcher watcher) {
         if (_eventThread != null)
-            return;
+            return false;
         boolean started = false;
         try {
             getEventLock().lockInterruptibly();
@@ -433,9 +430,11 @@ public class ZkClient implements Watcher, Closeable {
             if (!waitUntilConnected(maxMsToWaitUntilConnected, TimeUnit.MILLISECONDS))
                 LOG.error(String.format("Unable to connect to zookeeper server[%s] within timeout %dms", zkConnection.getServers(), maxMsToWaitUntilConnected));
             started = true;
+            return started;
         } catch (InterruptedException e) {
             ZooKeeper.States states = zkConnection.getZookeeperState();
             LOG.warn("unable to connect to server. current state is " + states);
+            return started;
         } finally {
             getEventLock().unlock();
             if (!started)
@@ -479,7 +478,7 @@ public class ZkClient implements Watcher, Closeable {
             setShutDownTrigger(true);
             _currentState = null;
             _eventThread.interrupt();
-            _eventThread.join(2000);
+            _eventThread.join(1000);
             zkConnection.close();
             _eventThread = null;
         } catch (InterruptedException e) {
@@ -490,17 +489,6 @@ public class ZkClient implements Watcher, Closeable {
         LOG.debug("Closing ZkClient...done");
     }
 
-    public int numberOfListeners(){
-        int listeners=0;
-        for (Set<ZkChildListener> set:_childListener.values()){
-            listeners+=set.size();
-        }
-        for (Set<ZkDataListener> set:_dataListener.values()){
-            listeners+=set.size();
-        }
-        listeners+=_stateListener.size();
-        return listeners;
-    }
 
     public ZooKeeper getZooKeeper(){
         return zkConnection==null?null:zkConnection.getZookeeper();
@@ -510,17 +498,6 @@ public class ZkClient implements Watcher, Closeable {
         return _currentState==KeeperState.SyncConnected;
     }
 
-    interface DataUpdater {
-
-        /**
-         * Updates the current data of a znode.
-         *
-         * @param currentData The current contents.
-         * @return the new data that should be written back to ZooKeeper.
-         */
-        public byte[] update(byte[] currentData);
-
-    }
 
 
 }

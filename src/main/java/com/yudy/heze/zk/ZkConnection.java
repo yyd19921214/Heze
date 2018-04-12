@@ -10,13 +10,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static org.apache.zookeeper.ZooDefs.Ids.OPEN_ACL_UNSAFE;
 
 public class ZkConnection {
 
@@ -35,20 +35,6 @@ public class ZkConnection {
     private final List<ACL> acls = new ArrayList<>();
 
 
-    private static final Method method;
-
-    static {
-        Method[] methods = ZooKeeper.class.getDeclaredMethods();
-        Method m = null;
-        for (Method method : methods) {
-            if (method.getName().equals("multi")) {
-                m = method;
-                break;
-            }
-        }
-        method = m;
-    }
-
     public ZkConnection(String zkServers, int sessionTimeOut, String authStr) {
         _servers = zkServers;
         _sessionTimeOut = sessionTimeOut;
@@ -60,21 +46,15 @@ public class ZkConnection {
         try {
             if (_zk != null)
                 throw new IllegalStateException("zk client has already been started");
-            try {
-                LOG.debug("Creating new ZookKeeper instance to connect to " + _servers + ".");
-                _zk = new ZooKeeper(_servers, _sessionTimeOut, watcher);
-                if (StringUtils.isNotBlank(_authStr)) {
-                    acls.clear();
-                    try {
-                        acls.add(new ACL(ZooDefs.Perms.ALL, new Id("digest", DigestAuthenticationProvider.generateDigest(_authStr))));
-                    } catch (NoSuchAlgorithmException e) {
-                        e.printStackTrace();
-                    }
-                    acls.add(new ACL(ZooDefs.Perms.READ, ZooDefs.Ids.ANYONE_ID_UNSAFE));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            LOG.debug("Creating new ZookKeeper instance to connect to " + _servers + ".");
+            _zk = new ZooKeeper(_servers, _sessionTimeOut, watcher);
+            if (StringUtils.isNotBlank(_authStr)) {
+                acls.clear();
+                acls.add(new ACL(ZooDefs.Perms.ALL, new Id("digest", DigestAuthenticationProvider.generateDigest(_authStr))));
+                acls.add(new ACL(ZooDefs.Perms.READ, ZooDefs.Ids.ANYONE_ID_UNSAFE));
             }
+        } catch (IOException | NoSuchAlgorithmException e) {
+            e.printStackTrace();
         } finally {
             _zookeeperLock.unlock();
         }
@@ -93,8 +73,8 @@ public class ZkConnection {
         }
     }
 
-    public String create(String path, byte[] data, CreateMode mode) throws KeeperException, InterruptedException {
-        return _zk.create(path, data, acls, mode);
+    public String create(String path, byte[] data, CreateMode mode) throws KeeperException, InterruptedException,KeeperException.NoNodeException {
+        return _zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, mode);
     }
 
     public void delete(String path) throws KeeperException, InterruptedException {
@@ -121,13 +101,6 @@ public class ZkConnection {
         return _zk != null ? _zk.getState() : null;
     }
 
-    public long getCreateTime(String path) throws KeeperException, InterruptedException {
-        Stat stat = _zk.exists(path, false);
-        if (stat != null) {
-            return stat.getCtime();
-        }
-        return -1;
-    }
 
     public String getServers() {
         return _servers;
@@ -137,17 +110,4 @@ public class ZkConnection {
         return _zk;
     }
 
-
-    public List<?> multi(Iterable<?> ops) {
-        if (method == null) throw new UnsupportedOperationException("multi operation must use zookeeper 3.4+");
-        try {
-            return (List<?>) method.invoke(_zk, ops);
-        } catch (IllegalArgumentException e) {
-            throw new UnsupportedOperationException("ops must be 'org.apache.zookeeper.Op'");
-        } catch (IllegalAccessException e) {
-            throw new UnsupportedOperationException(e);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

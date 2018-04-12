@@ -24,7 +24,6 @@ public class ZkEventThread extends Thread {
         public ZkEvent(String _description) {
             this._description = _description;
         }
-
         public abstract void run() throws Exception;
 
         @Override
@@ -64,20 +63,16 @@ public class ZkEventThread extends Thread {
                 ZkEvent event=_events.take();
                 int eventId=_eventId.getAndIncrement();
                 LOG.debug("Delivering event #" + eventId + " " + event);
-
                 try {
                     event.run();
                 }catch (InterruptedException e) {
-                    e.printStackTrace();
                     shutdown();
-                } catch (Throwable e) {
+                } catch (Exception e) {
                     e.printStackTrace();
-                    LOG.error("Error handling event " + event, e);
                 }
                 LOG.debug("Delivering event #" + eventId + " " + event);
             }
         }catch (InterruptedException e){
-            e.printStackTrace();
 
         }
     }
