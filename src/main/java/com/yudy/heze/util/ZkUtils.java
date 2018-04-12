@@ -1,35 +1,31 @@
 package com.yudy.heze.util;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import com.yudy.heze.cluster.Cluster;
 import com.yudy.heze.cluster.Group;
 import com.yudy.heze.exception.ZkNoNodeException;
 import com.yudy.heze.server.ServerRegister;
 import com.yudy.heze.zk.ZkClient;
 import org.apache.commons.lang.StringUtils;
-import org.apache.zookeeper.ZKUtil;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ZkUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(ZkUtils.class);
 
     public static final String ZK_MQ_BASE = "/HEZEMQ";
 
-    public static void makeSurePersistentPathExist(ZkClient zkClient, String path) {
+    public static String makeSurePersistentPathExist(ZkClient zkClient, String path) {
+        String s;
         if (!zkClient.exists(path, true)) {
-            try {
-                zkClient.createPersistent(path, true);
-            } catch (Exception e) {
-                e.printStackTrace();
-                zkClient.delete(path);
-                zkClient.createPersistent(path, true);
-//                e.printStackTrace();
-            }
+            s=zkClient.createPersistent(path, true);
+            return s;
         }
+        return path;
     }
 
     public static List<String> getChildrenParentMayNotExist(ZkClient zkClient, String path) {
@@ -44,13 +40,6 @@ public class ZkUtils {
         return fromByte(zkClient.readData(path));
     }
 
-    public static String readDataMaybeNull(ZkClient zkClient, String path) {
-        try {
-            return fromByte(zkClient.readData(path));
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     private static void createParentPath(ZkClient zkClient, String path) {
         String parentDir = path.substring(0, path.lastIndexOf('/'));
@@ -59,12 +48,27 @@ public class ZkUtils {
         }
     }
 
-    public static String fromByte(byte[] bytes) {
+    public static String createEphemeralPath(ZkClient zkClient,String path,String data){
+        String pathCT;
+        try{
+            pathCT=zkClient.createEphemeralSequential(path,getBytes(data));
+        }catch (ZkNoNodeException e){
+            createParentPath(zkClient,path);
+            pathCT=zkClient.createEphemeralSequential(path,getBytes(data));
+        }
+        return pathCT;
+    }
+
+    public static String createEphemeralPathExpectConflict(ZkClient zkClient,String path,String data){
+        return createEphemeralPath(zkClient,path,data);
+    }
+
+    private static String fromByte(byte[] bytes) {
         return fromByte(bytes, "utf-8");
     }
 
 
-    public static String fromByte(byte[] bytes, String encode) {
+    private static String fromByte(byte[] bytes, String encode) {
         if (bytes == null)
             return null;
         try {
@@ -76,11 +80,11 @@ public class ZkUtils {
         return null;
     }
 
-    public static byte[] getBytes(String s) {
+    private static byte[] getBytes(String s) {
         return getBytes(s, "utf-8");
     }
 
-    public static byte[] getBytes(String s, String encode) {
+    private static byte[] getBytes(String s, String encode) {
         if (s == null)
             return null;
         try {
@@ -118,20 +122,7 @@ public class ZkUtils {
         }
     }
 
-    public static String createEphemeralPath(ZkClient zkClient,String path,String data){
-        String pathCT;
-        try{
-            pathCT=zkClient.createEphemeralSequential(path,getBytes(data));
-        }catch (ZkNoNodeException e){
-            createParentPath(zkClient,path);
-            pathCT=zkClient.createEphemeralSequential(path,getBytes(data));
-        }
-        return pathCT;
-    }
 
-    public static String createEphemeralPathExpectConflict(ZkClient zkClient,String path,String data){
-        return createEphemeralPath(zkClient,path,data);
-    }
 
 
 }
