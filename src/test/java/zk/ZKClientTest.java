@@ -14,7 +14,7 @@ public class ZKClientTest {
 
     static ZkClient zkClient=null;
 
-    private String nodePath="/HEZEMQTEST2/child";
+    private String nodePath="/HEZEMQTEST3/child";
 
     @BeforeClass
     public static void init(){
@@ -53,7 +53,7 @@ public class ZKClientTest {
     }
 
     @Test
-    public void test005_testGetChildren(){
+    public void test005_GetChildren(){
         zkClient.createPersistent(nodePath,true);
         List<String> childList=zkClient.getChildren(nodePath.substring(0,nodePath.lastIndexOf("/")));
         Assert.assertNotNull(childList);
@@ -61,9 +61,26 @@ public class ZKClientTest {
     }
 
 
+    @Test
+    public void test006_subscribeChildChanges(){
+        zkClient.createPersistent("/HEZEMQTEST3",true);
+        List<String> r=zkClient.subscribeChildChanges("/HEZEMQTEST3",(parent,currentChildren)->{
+            System.out.println(111);
+            System.out.println(currentChildren.get(0));
+        });
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        zkClient.createPersistent(nodePath,true);
+
+    }
+
+
 
     @Test
-    public void test006_delete(){
+    public void test099_delete(){
         zkClient.createPersistent(nodePath,true);
         zkClient.delete(nodePath);
         Assert.assertFalse(zkClient.exists(nodePath));

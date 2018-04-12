@@ -44,7 +44,7 @@ public class EmbeddedConsumer {
         port=config.getPort();
         if (StringUtils.isNotBlank(replicaHost)){
             nettyClient=new NettyClient();
-            this.scheduler.scheduleWithRate(new ReplicaConsumerRunnable(),30*1000,config.getReplicaFetchInterval()*1000L);
+            this.scheduler.scheduleWithRate(new ReplicaConsumerRunnable(),3*1000L,config.getReplicaFetchInterval()*1000L);
             LOGGER.info("Embedded consumer started, replica host:" + replicaHost.toString());
         }
     }

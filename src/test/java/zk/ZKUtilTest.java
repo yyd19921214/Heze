@@ -2,15 +2,10 @@ package zk;
 
 import com.yudy.heze.util.ZkUtils;
 import com.yudy.heze.zk.ZkClient;
-import com.yudy.heze.zk.ZkConnection;
-import org.apache.zookeeper.*;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
-import java.io.UnsupportedEncodingException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ZKUtilTest {
