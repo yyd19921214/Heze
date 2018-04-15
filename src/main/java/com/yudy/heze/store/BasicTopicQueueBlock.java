@@ -14,12 +14,13 @@ import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-public class TopicQueueBlock {
+public class BasicTopicQueueBlock {
+
     private final Logger LOG = LoggerFactory.getLogger(TopicQueueBlock.class);
 
     public static final String BLOCK_FILE_SUFFIX = ".umq";//数据文件
 
-    private static final String BLOCK_FILE_PREFIX = "tblock";
+    private static final String BLOCK_FILE_PREFIX = "block";
 
     public static final int BLOCK_SIZE = 32 * 1024 * 1024;//32MB
 
@@ -36,7 +37,7 @@ public class TopicQueueBlock {
         return fileBackupDir + File.separator + String.format("%s_%s_%d%s", BLOCK_FILE_PREFIX, queueName, fileNum, BLOCK_FILE_SUFFIX);
     }
 
-    public TopicQueueBlock(String blockFilePath, TopicQueueIndex index, ByteBuffer byteBuffer, MappedByteBuffer mappedByteBuffer, FileChannel fileChannel, RandomAccessFile randomAccessFile) {
+    public BasicTopicQueueBlock(String blockFilePath, TopicQueueIndex index, ByteBuffer byteBuffer, MappedByteBuffer mappedByteBuffer, FileChannel fileChannel, RandomAccessFile randomAccessFile) {
         this.blockFilePath = blockFilePath;
         this.index = index;
         this.byteBuffer = byteBuffer;
@@ -45,7 +46,7 @@ public class TopicQueueBlock {
         this.blockFile = randomAccessFile;
     }
 
-    public TopicQueueBlock(TopicQueueIndex index, String blockFilePath) {
+    public BasicTopicQueueBlock(TopicQueueIndex index, String blockFilePath) {
         this.blockFilePath = blockFilePath;
         this.index = index;
         try {
@@ -60,10 +61,9 @@ public class TopicQueueBlock {
         }
     }
 
-    public TopicQueueBlock duplicate() {
-        return new TopicQueueBlock(this.blockFilePath, this.index, this.byteBuffer.duplicate(), this.mappedBlock, this.fileChannel, this.blockFile);
+    public BasicTopicQueueBlock duplicate() {
+        return new BasicTopicQueueBlock(this.blockFilePath, this.index, this.byteBuffer.duplicate(), this.mappedBlock, this.fileChannel, this.blockFile);
     }
-
 
     public void putEOF() {
         byteBuffer.position(index.getWritePosition());
@@ -124,6 +124,25 @@ public class TopicQueueBlock {
 
     }
 
+    /**
+     * 计算在一个block上存储了多少消息
+     * @return
+     */
+    public int countRecord(){
+        int count=0;
+        int readPos=index.getReadPosition();
+        int readCount=index.getReadCounter();
+        index.putReadPosition(0);
+        while (read()!=null){
+            count++;
+        }
+        index.putReadCounter(readCount);
+        index.putReadPosition(readPos);
+        return count;
+    }
+
+    public String getBlockFilePath(){return this.blockFilePath;}
+
     public void sync() {
         if (mappedBlock != null)
             mappedBlock.force();
@@ -156,12 +175,5 @@ public class TopicQueueBlock {
             LOG.error("close fqueue block file failed", e);
         }
     }
-
-    public String getBlockFilePath(){return this.blockFilePath;}
-
-    public int count() {
-        return 0;
-    }
-
 
 }
