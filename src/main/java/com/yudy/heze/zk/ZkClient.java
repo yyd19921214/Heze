@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.zookeeper.CreateMode.PERSISTENT;
 import static org.apache.zookeeper.KeeperException.Code.NONODE;
 
+@Deprecated
 public class ZkClient implements Watcher, Closeable {
 
     private static final int DEFAULT_CONNECTION_TIMEOUT = 10000000;

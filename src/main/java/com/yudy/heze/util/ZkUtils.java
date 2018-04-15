@@ -19,6 +19,8 @@ public class ZkUtils {
 
     public static final String ZK_MQ_BASE = "/HEZEMQ";
 
+    public static final String ZK_BROKER_GROUP = ZK_MQ_BASE + "/brokergroup";
+
     public static String makeSurePersistentPathExist(ZkClient zkClient, String path) {
         String s;
         if (!zkClient.exists(path, true)) {
