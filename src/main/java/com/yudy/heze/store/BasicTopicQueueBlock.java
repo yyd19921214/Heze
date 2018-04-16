@@ -22,7 +22,7 @@ public class BasicTopicQueueBlock {
 
     private static final String BLOCK_FILE_PREFIX = "block";
 
-    public static final int BLOCK_SIZE = 32 * 1024 * 1024;//32MB
+    public static int BLOCK_SIZE = 32 * 1024 * 1024;//32MB
 
     public static final int EOF = -1;
 
@@ -138,6 +138,7 @@ public class BasicTopicQueueBlock {
         }
         index.putReadCounter(readCount);
         index.putReadPosition(readPos);
+        index.sync();
         return count;
     }
 

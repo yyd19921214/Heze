@@ -16,7 +16,7 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
 
     private String queueName;
     private String fileDir;
-    private TopicQueueIndex index;
+    public TopicQueueIndex index;
     private BasicTopicQueueBlock readBlock;
     private BasicTopicQueueBlock writeBlock;
     private ReentrantLock readLock;
@@ -31,7 +31,7 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
         this.index=new BasicTopicQueueIndex(queueName,fileDir);
         this.size = new AtomicInteger(index.getWriteCounter() - index.getReadCounter());
         this.writeBlock = new BasicTopicQueueBlock(index, BasicTopicQueueBlock.formatBlockFilePath(queueName, index.getWriteNum(), fileDir));
-        if (index.getReadNum() == index.getWriteCounter()) {
+        if (index.getReadNum() == index.getWriteNum()) {
             this.readBlock = this.writeBlock.duplicate();
         } else {
             this.readBlock = new BasicTopicQueueBlock(index, BasicTopicQueueBlock.formatBlockFilePath(queueName, index.getReadNum(), fileDir));
@@ -104,6 +104,9 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
         readLock.lock();
         try {
             if (index.getReadNum()!=0){
+                if (index.getWriteNum()!=index.getReadNum()){
+                    this.readBlock.close();
+                }
                 index.putReadNum(0);
                 if (index.getWriteNum()==0){
                     this.readBlock=this.writeBlock.duplicate();
@@ -117,6 +120,67 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
             return true;
         }finally {
             readLock.unlock();
+        }
+    }
+
+    /**
+     * 定位到第{counter}条消息
+     * @param counter
+     * @return
+     */
+    public boolean locate(int counter){
+        if (counter>index.getWriteCounter()){
+            throw new IllegalArgumentException();
+        }
+        int writeNum=index.getWriteNum();
+        int readNum=index.getReadNum();
+        BasicTopicQueueBlock _block=readBlock;
+        int totalCnt=0;
+        int i=0;
+        for (;i<=writeNum;i++){
+            index.putReadNum(i);
+            index.putReadPosition(0);
+
+            if (i==readNum){
+                this.readBlock=_block;
+            }
+            else if (i==writeNum){
+                this.readBlock=this.writeBlock.duplicate();
+            }
+            else{
+                this.readBlock = new BasicTopicQueueBlock(index, BasicTopicQueueBlock.formatBlockFilePath(queueName, i, fileDir));
+            }
+            int recordCnt=this.readBlock.countRecord();
+            if (totalCnt+recordCnt>=counter){
+                for (int j=1;j<counter-totalCnt;j++){
+                    this.readBlock.read();
+                }
+                break;
+            }
+            else{
+                totalCnt+=recordCnt;
+                if (i!=writeNum){
+                    this.readBlock.close();
+                }
+            }
+        }
+        index.putReadCounter(counter-1);
+        if (i!=readNum){
+
+            _block.close();
+        }
+        return true;
+    }
+
+    public boolean skip(int step){
+        if (step>=0){
+            return locate(this.index.getReadCounter()+step+1);
+        }
+        else{
+            if (this.index.getReadCounter()+step<0){
+                throw new IllegalArgumentException();
+            }
+            return locate(this.index.getReadCounter()+step+1);
         }
     }
 
@@ -146,6 +210,23 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
             this.readBlock=new BasicTopicQueueBlock(index,BasicTopicQueueBlock.formatBlockFilePath(queueName,nextReadBlockNum,fileDir));
         index.putReadNum(nextReadBlockNum);
         index.putReadPosition(0);
+    }
+
+    public void sync(){
+        try{
+            index.sync();
+        }catch (Exception e){
+            e.printStackTrace();
+            LOGGER.error("unable to sync...");
+        }
+        writeBlock.sync();
+    }
+
+    public void close(){
+        writeBlock.close();
+        if (index.getReadNum()!=index.getWriteNum())
+            readBlock.close();
+        index.close();
     }
 
 
