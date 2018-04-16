@@ -70,8 +70,6 @@ public class Producer {
             client = new NettyClient();
             if (config.getEnableZookeeper()) {
                 loadClusterFromZK(config);
-                //TODO register on zk
-
 
             } else {
                 Group brokerGroup=new Group(config.getBrokerGroupName(),config.getHost(),config.getPort());
