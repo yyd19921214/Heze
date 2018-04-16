@@ -1,5 +1,6 @@
 package zk;
 
+import com.yudy.heze.zk.ZkChildListener;
 import com.yudy.heze.zk.ZkClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -63,20 +64,26 @@ public class ZKClientTest {
 
     @Test
     public void test006_subscribeChildChanges(){
-        zkClient.createPersistent("/HEZEMQTEST3",true);
-        List<String> r=zkClient.subscribeChildChanges("/HEZEMQTEST3",(parent,currentChildren)->{
-            System.out.println(111);
-            System.out.println(currentChildren.get(0));
-        });
+        zkClient.createPersistent(nodePath.substring(0,nodePath.lastIndexOf("/")),true);
+        ZkChildListener listener=new ZkChildListener() {
+            @Override
+            public void handleChildChange(String parentPath, List<String> currentChildren) throws Exception {
+                System.out.println("node state has been changed");
+
+            }
+        };
+        zkClient.subscribeChildChanges(nodePath.substring(0,nodePath.lastIndexOf("/")),listener);
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         zkClient.createPersistent(nodePath,true);
+        zkClient.delete(nodePath);
+        zkClient.delete(nodePath.substring(0,nodePath.lastIndexOf("/")));
+        zkClient.unsubscribeChildChanges(nodePath.substring(0,nodePath.lastIndexOf("/")),listener);
 
     }
-
 
 
     @Test

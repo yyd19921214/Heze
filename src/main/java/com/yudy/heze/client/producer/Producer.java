@@ -11,6 +11,7 @@ import com.yudy.heze.network.Topic;
 import com.yudy.heze.network.TransferType;
 import com.yudy.heze.server.RequestHandler;
 import com.yudy.heze.util.DataUtils;
+import com.yudy.heze.util.ZkUtils;
 import org.apache.zookeeper.ZKUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,7 @@ public class Producer {
         if (client == null) {
             client = new NettyClient();
             if (config.getEnableZookeeper()) {
-                //loadClusterFromZK(config);
+                loadClusterFromZK(config);
                 //TODO register on zk
 
 
@@ -181,8 +182,7 @@ public class Producer {
     private void loadClusterFromZK(ServerConfig config) {
         client.initZKClient(config);
         if (config.getEnableZookeeper()) {
-            //TODO
-
+            ZkUtils.getCluster(client.zkClient);
         }
     }
 

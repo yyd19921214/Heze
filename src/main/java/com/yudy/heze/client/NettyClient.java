@@ -46,12 +46,9 @@ public class NettyClient {
     public void initZKClient(ServerConfig config){
         if (config.getEnableZookeeper()&&zkClient==null){
             String authString=config.getZkUsername()+":"+config.getZkPassword();
-//            this.zkClient=new ZkClient();
-
-
+            //todo enable session time and connection time
+            this.zkClient=new ZkClient(config.getZkConnect(),authString);
         }
-
-//        if ()
 
     }
 
