@@ -95,6 +95,15 @@ public class ZkClient implements Watcher, Closeable {
         });
     }
 
+    public void unsubscribeChildChanges(String path, ZkChildListener childListener) {
+        synchronized (_childListener) {
+            final Set<ZkChildListener> listeners = _childListener.get(path);
+            if (listeners != null) {
+                listeners.remove(childListener);
+            }
+        }
+    }
+
 
 
     public String createPersistent(String path, boolean createParents)  {
