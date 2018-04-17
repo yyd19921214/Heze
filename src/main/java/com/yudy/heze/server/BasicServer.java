@@ -3,6 +3,7 @@ package com.yudy.heze.server;
 import com.yudy.heze.config.ServerConfig;
 import com.yudy.heze.serializer.NettyDecoder;
 import com.yudy.heze.serializer.NettyEncode;
+import com.yudy.heze.store.BasicTopicQueuePool;
 import com.yudy.heze.store.TopicQueuePool;
 import com.yudy.heze.util.PortUtils;
 import com.yudy.heze.util.ZkUtils;
@@ -34,8 +35,9 @@ public class BasicServer implements MServer{
 
     private final IntObjectMap<RequestHandler> handlerMap = new IntObjectHashMap<>(128);
 
+    private ZkClient zkClient;
 
-
+    private String zkPath;
 
     @Override
     public boolean startup(String configName) {
@@ -59,6 +61,19 @@ public class BasicServer implements MServer{
     private void start(ServerConfig config) {
         LOGGER.info("server is starting...");
         PortUtils.checkAvailablePort(config.getPort());
+        if (config.getServerName()==null){
+            throw new IllegalArgumentException("Must set a Name for this broker");
+        }
+
+        //register in zk
+        zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
+        zkPath=ZkUtils.ZK_BROKER_GROUP+"/"+config.getServerName();
+        if (zkClient.exists(zkPath)){
+            throw new IllegalArgumentException("A same name broker has alrady existed...");
+        }
+        zkClient.createPersistent(zkPath,true);
+        zkClient.writeData(zkPath,config.getHost()+":"+config.getPort());
+
         ServerBootstrap b = configServer();
         try {
             if (StringUtils.isNotBlank(config.getHost())) {
@@ -67,23 +82,14 @@ public class BasicServer implements MServer{
                 f = b.bind(config.getPort()).sync();
             }
             Runtime.getRuntime().addShutdownHook(new BasicServer.ShutdownThread());
+
         } catch (InterruptedException e) {
-//            LOGGER.error("Exception happen when start server", e);
             e.printStackTrace();
         }
 
+        //todo init embeded producer
 
-
-        //todo register in zk
-        //todo init existed queue poll
-        //todo init embeded producecr
-
-        if (config.getEnableZookeeper()){
-            ZkClient zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
-            zkClient.createPersistentSequential(ZkUtils.ZK_BROKER_GROUP,config.getHost()+":"+config.getPort());
-        }
-
-//        TopicQueuePool.startup(zkClient,config);
+        BasicTopicQueuePool.startup(zkClient,config);
 //
 //        if (config.getReplicaHost()!=null){
 //            EmbeddedConsumer.getInstance().start(config);
@@ -129,15 +135,20 @@ public class BasicServer implements MServer{
         }
     }
 
+
     @Override
     public void close() throws IOException {
-//        LOGGER.info("Netty server is stoping");
-        System.out.println("do some clean work before shutdown");
         if(f.channel()!=null)
             f.channel().close();
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
-        //todo unregister from zk
+        // unregister from zk
+        System.out.println(zkClient.exists(zkPath));
+
+        if (zkClient!=null&&StringUtils.isNotBlank(zkPath)&&zkClient.exists(zkPath)){
+            zkClient.deleteRecursive(zkPath);
+            zkClient.close();
+        }
         //todo close embededProducer
         //todo delete all queue file in disk;
 
@@ -151,5 +162,13 @@ public class BasicServer implements MServer{
         //todo recover form failup
         //todo copy data from slave
         return true;
+    }
+
+    public String getZkPath() {
+        return zkPath;
+    }
+
+    public ZkClient getZkClient() {
+        return zkClient;
     }
 }
