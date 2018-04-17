@@ -1,11 +1,11 @@
 package Store;
 
-import com.yudy.heze.server.backup.BackupQueueBlock;
 import com.yudy.heze.store.BasicTopicQueue;
 import com.yudy.heze.store.BasicTopicQueueBlock;
-import com.yudy.heze.store.index.BasicTopicQueueIndex;
-import org.apache.commons.lang.StringUtils;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
@@ -40,8 +40,8 @@ public class BasicQueueTest {
             Assert.assertTrue(new String(topicQueue.poll()).equals(String.format(writeData, i)));
         }
         Assert.assertTrue(topicQueue.poll() == null);
-        Assert.assertTrue(topicQueue.index.getWriteNum()==0);
-        Assert.assertTrue(topicQueue.index.getReadNum()==0);
+        Assert.assertTrue(topicQueue.index.getWriteNum() == 0);
+        Assert.assertTrue(topicQueue.index.getReadNum() == 0);
         topicQueue.sync();
         topicQueue.close();
         topicQueue = new BasicTopicQueue(queueName, fileDir);
@@ -66,15 +66,12 @@ public class BasicQueueTest {
     @Test
     public void test003_ReadWrite() {
         topicQueue = new BasicTopicQueue(queueName, fileDir);
-
         String writeData = "Good Night_%d";
         for (int i = 1; i <= 40; i++) {
             topicQueue.offer(String.format(writeData, i).getBytes());
         }
-
         Assert.assertTrue(topicQueue.index.getWriteCounter() == 40);
         Assert.assertTrue(topicQueue.index.getWriteNum() == 5);
-
         for (int i = 1; i <= 40; i++) {
             Assert.assertTrue(new String(topicQueue.poll()).equals(String.format(writeData, i)));
         }
@@ -91,8 +88,6 @@ public class BasicQueueTest {
         topicQueue.skip(-12);
         readData = new String(topicQueue.poll());
         Assert.assertTrue(readData.equals(String.format(writeData, 17)));
-
-
         topicQueue.skip(1);
         readData = new String(topicQueue.poll());
         Assert.assertTrue(readData.equals(String.format(writeData, 19)));
@@ -107,11 +102,7 @@ public class BasicQueueTest {
         topicQueue.locate(6);
         topicQueue.skip(4);
         readData = new String(topicQueue.poll());
-
         Assert.assertTrue(readData.equals(String.format(writeData, 10)));
-
-
-
 
         doClean();
     }
@@ -120,15 +111,7 @@ public class BasicQueueTest {
         topicQueue.close();
         File f = new File(fileDir);
         Arrays.stream(f.listFiles(File::isFile)).forEach(File::delete);
-
     }
-
-//    @AfterClass
-//    public static void doSomeClean(){
-//        topicQueue.close();
-//        File f=new File(fileDir);
-//        Arrays.stream(f.listFiles(File::isFile)).forEach(File::delete);
-//    }
 
 
 }

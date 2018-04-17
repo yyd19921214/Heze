@@ -33,6 +33,9 @@ public class ServerConfig extends Config {
         return getString("mq.host", null);
     }
 
+
+    public String getServerName(){return getString("mq.server",null);}
+
     /**
      * 备份节点
      *
@@ -115,14 +118,5 @@ public class ServerConfig extends Config {
     public String getBrokerGroupName() {
         return getString("mq.group.name", null);
     }
-
-
-    public static void main(String[] args) {
-        String s1 = " ";
-        String s2 = null;
-        if (StringUtils.isBlank(s2))
-            System.out.println("111");
-    }
-
 
 }
