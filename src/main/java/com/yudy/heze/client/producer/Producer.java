@@ -121,16 +121,17 @@ public class Producer {
     }
 
     public boolean send(Topic topic,String... topicNames){
-        List<Topic> topics=new ArrayList<>();
-        if (null!=topicNames){
-            for (String tp:topicNames){
-                Topic top=new Topic();
-                top.setTopic(tp);
-                top.getContents().addAll(topic.getContents());
-                topics.add(top);
-            }
-        }
-        return send(topics);
+        return false;
+//        List<Topic> topics=new ArrayList<>();
+//        if (null!=topicNames){
+//            for (String tp:topicNames){
+//                Topic top=new Topic();
+//                top.setTopic(tp);
+//                top.getContents().addAll(topic.getContents());
+//                topics.add(top);
+//            }
+//        }
+//        return send(topics);
     }
 
     private boolean send(List<Topic> topics){

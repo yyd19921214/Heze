@@ -83,7 +83,7 @@ public class BasicTopicQueuePool {
             throw new IllegalArgumentException(pathDir.getAbsolutePath()+"is not a directory");
         }
         Map<String, BasicTopicQueue> existFQueues = new HashMap<>();
-        File[] indexFiles = pathDir.listFiles((File dir, String name) -> name.endsWith(INDEX_FILE_SUFFIX));
+        File[] indexFiles = pathDir.listFiles((File dir, String name) -> name.startsWith("index")&&name.endsWith(INDEX_FILE_SUFFIX));
         if (ArrayUtils.isNotEmpty(indexFiles)) {
             for (File indexFile : indexFiles) {
                 String queueName = parseQueueName(indexFile.getName());
