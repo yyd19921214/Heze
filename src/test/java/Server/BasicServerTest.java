@@ -1,13 +1,10 @@
 package Server;
 
-import com.yudy.heze.config.Config;
 import com.yudy.heze.server.BasicServer;
 import com.yudy.heze.util.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
-
-import java.io.IOException;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class BasicServerTest {

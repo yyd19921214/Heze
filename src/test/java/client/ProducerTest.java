@@ -18,14 +18,7 @@ public class ProducerTest {
 //    }
 
     public static void main(String[] args) {
-//        System.out.println();
-//        String cfg = "file:D:\\heze\\conf\\config.properties";
-//        Producer.getInstance().connect(cfg);
-//        Topic topic = new Topic();
-//        topic.setTopic("umq");
-//        topic.addContent("hellotony");
-//        Producer.getInstance().send(topic);
-//        System.out.println("finished write....");
+
 
     }
 
