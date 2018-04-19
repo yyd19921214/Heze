@@ -1,0 +1,2 @@
+2018-04-17 18:16:26,871 [com.yudy.heze.server.NettyServer] - ERROR: Main config file not exist => 'D:\heze\config.properties', copy one from 'conf/server.properties.sample' first.
+2018-04-17 18:17:24,031 [com.yudy.heze.server.NettyServer] - ERROR: Main config file not exist => 'D:\heze\config.properties', copy one from 'conf/server.properties.sample' first.

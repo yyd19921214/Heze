@@ -143,8 +143,6 @@ public class BasicServer implements MServer{
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
         // unregister from zk
-        System.out.println(zkClient.exists(zkPath));
-
         if (zkClient!=null&&StringUtils.isNotBlank(zkPath)&&zkClient.exists(zkPath)){
             zkClient.deleteRecursive(zkPath);
             zkClient.close();
@@ -158,10 +156,13 @@ public class BasicServer implements MServer{
 
     }
 
-    private boolean recovery(){
-        //todo recover form failup
-        //todo copy data from slave
-        return true;
+    public void waitForClose() throws InterruptedException {
+        f.channel().closeFuture().sync();
+
+    }
+
+    public void registerHandler(int handlerId,RequestHandler requestHandler){
+        handlerMap.put(handlerId,requestHandler);
     }
 
     public String getZkPath() {
@@ -171,4 +172,11 @@ public class BasicServer implements MServer{
     public ZkClient getZkClient() {
         return zkClient;
     }
+
+    private boolean recovery(){
+        //todo recover form failup
+        //todo copy data from slave
+        return true;
+    }
+
 }

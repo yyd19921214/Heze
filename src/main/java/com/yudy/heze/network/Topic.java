@@ -12,7 +12,7 @@ public class Topic implements Serializable {
 
     private int readCounter;
 
-    private List<Serializable> contents = new ArrayList<Serializable>();
+    private Serializable content;
 
     public String getTopic() {
         return topic;
@@ -22,12 +22,12 @@ public class Topic implements Serializable {
         this.topic = topic;
     }
 
-    public List<Serializable> getContents() {
-        return contents;
+    public Serializable getContent() {
+        return content;
     }
 
-    public void addContent(Serializable content){
-        contents.add(content);
+    public void setContent(Serializable content){
+        this.content=content;
     }
 
     public int getReadCounter() {
@@ -39,7 +39,7 @@ public class Topic implements Serializable {
     }
 
     public String toString(){
-        return String.format("topic:%s,counter:%d,content:%s", topic, readCounter, contents.toString());
+        return String.format("topic:%s,counter:%d,content:%s", topic, readCounter, content.toString());
     }
 
 }
