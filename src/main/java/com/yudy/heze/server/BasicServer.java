@@ -25,6 +25,11 @@ import java.io.IOException;
 
 public class BasicServer implements MServer{
 
+    //todo init an embeded producer to make replica
+    //todo close embeded producer when BasicServer close;
+    //todo add recovery mechanism
+    //todo copy data from slave
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyServer.class);
 
     private EventLoopGroup bossGroup;
@@ -87,14 +92,7 @@ public class BasicServer implements MServer{
             e.printStackTrace();
         }
 
-        //todo init embeded producer
-
         BasicTopicQueuePool.startup(zkClient,config);
-//
-//        if (config.getReplicaHost()!=null){
-//            EmbeddedConsumer.getInstance().start(config);
-//        }
-
     }
 
     private ServerBootstrap configServer() {
@@ -147,11 +145,7 @@ public class BasicServer implements MServer{
             zkClient.deleteRecursive(zkPath);
             zkClient.close();
         }
-        //todo close embededProducer
-        //todo delete all queue file in disk;
-
-//        EmbeddedConsumer.getInstance().stop();
-//        LOGGER.info("Netty server stopped");
+        LOGGER.info("Netty server stopped");
         System.out.println("Netty server stopped");
 
     }
@@ -174,8 +168,6 @@ public class BasicServer implements MServer{
     }
 
     private boolean recovery(){
-        //todo recover form failup
-        //todo copy data from slave
         return true;
     }
 

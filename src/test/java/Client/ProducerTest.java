@@ -3,6 +3,9 @@ package Client;
 import com.yudy.heze.client.producer.BasicProducer;
 import com.yudy.heze.network.Topic;
 import com.yudy.heze.server.BasicServer;
+import com.yudy.heze.server.RequestHandler;
+import com.yudy.heze.server.handlers.FetchRequestHandler;
+import com.yudy.heze.server.handlers.ProducerRequestHandler;
 import com.yudy.heze.store.BasicTopicQueue;
 import com.yudy.heze.util.DataUtils;
 import com.yudy.heze.util.ZkUtils;
@@ -66,18 +69,7 @@ public class ProducerTest {
 
     }
 
-//    @Test
-    public void test002_CheckProducer(){
-        topicQueue = new BasicTopicQueue(topicName, fileDir);
-        topicQueue.resetHead();
-        System.out.println(topicQueue.index.getReadCounter());
-        System.out.println(topicQueue.index.getReadNum());
-        System.out.println(topicQueue.index.getReadPosition());
-        byte[] readData=topicQueue.poll();
-        System.out.println(DataUtils.deserialize(readData));
-//        System.out.println("1111"+l.get(0));
-        Assert.assertNotNull(readData);
-    }
+
 
     @AfterClass
     public static void doClean(){
@@ -85,11 +77,33 @@ public class ProducerTest {
         zkClient.close();
     }
 
+}
+
+class ServerInThread implements Runnable{
+
+
+
+    private static final String ZkConnectStr="127.0.0.1:2181";
+
+
+
+    @Override
+    public void run() {
+        ZkClient zkClient=new ZkClient(ZkConnectStr,4000);
+        zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
+        zkClient.close();
+        BasicServer basicServer=new BasicServer();
+        basicServer.startup("conf/config.properties");
+        basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
+        basicServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
+        try {
+            basicServer.waitForClose();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
 
 
 
-
-
-
+    }
 }

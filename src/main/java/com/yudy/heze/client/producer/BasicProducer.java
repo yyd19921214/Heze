@@ -28,7 +28,7 @@ public class BasicProducer {
 
     //todo add scheduler to notify producer when new server register in zookeeper
     //todo add fail retry mechanism
-    //todo use producer Pool instead of singleton
+    //todo use clientPool instead of singleton
     //todo add ack mechanism
 
     private static final BasicProducer INSTANCE = new BasicProducer();

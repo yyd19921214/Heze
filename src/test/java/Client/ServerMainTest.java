@@ -19,6 +19,7 @@ public class ServerMainTest {
 
         zkClient.close();
         basicServer=new BasicServer();
+//        basicServer.
         basicServer.startup("conf/config.properties");
         basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
         basicServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
