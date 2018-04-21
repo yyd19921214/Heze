@@ -13,10 +13,9 @@ import org.I0Itec.zkclient.ZkClient;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ProducerTest {
@@ -41,6 +40,24 @@ public class ProducerTest {
 
     @Test
     public void test001_Start(){
+
+        ServerInThread st=new ServerInThread();
+        Thread serverThread=new Thread(st);
+        serverThread.start();
+
+        ServerInThread st2=new ServerInThread();
+        st2.configPath="conf/config2.properties";
+        Thread serverThread2=new Thread(st2);
+        serverThread2.start();
+
+
+        try {
+            Thread.sleep(5000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
         BasicProducer producer=BasicProducer.getInstance();
         producer.init("file:///heze/conf/config.properties");
         Assert.assertTrue(!producer.serverIpMap.isEmpty());
@@ -57,15 +74,23 @@ public class ProducerTest {
         boolean res=producer.send(topics,params);
         Assert.assertTrue(res);
 
-        topicQueue = new BasicTopicQueue(topicName, fileDir);
-        topicQueue.resetHead();
-        for (int i=1;i<=5;i++){
-            System.out.println(i);
-            byte[] readData=topicQueue.poll();
-            Assert.assertNotNull(readData);
-            String readStr= (String) DataUtils.deserialize(readData);
-            Assert.assertTrue(readStr.equals(String.format(topicContent,i)));
-        }
+        params.clear();
+        params.put("broker","MyServer02");
+        boolean res2=producer.send(topics,params);
+        Assert.assertTrue(res);
+
+//        topicQueue = new BasicTopicQueue(topicName, fileDir);
+//        topicQueue.resetHead();
+//        for (int i=1;i<=10;i++){
+//            byte[] readData=topicQueue.poll();
+//            Assert.assertNotNull(readData);
+//            String readStr= (String) DataUtils.deserialize(readData);
+//            System.out.println(readStr);
+////            Assert.assertTrue(readStr.equals(String.format(topicContent,i)));
+//        }
+//        topicQueue.close();
+        st.stopNow();
+        st2.stopNow();
 
     }
 
@@ -75,6 +100,10 @@ public class ProducerTest {
     public static void doClean(){
         zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
         zkClient.close();
+        File f=new File("data");
+        Arrays.stream(f.listFiles((child) -> {
+            return child.getName().endsWith(".umq")&&child.isFile();
+        })).forEach(ff-> ff.delete());
     }
 
 }
@@ -84,16 +113,19 @@ class ServerInThread implements Runnable{
 
 
     private static final String ZkConnectStr="127.0.0.1:2181";
+    BasicServer basicServer;
+    ZkClient zkClient;
+    String configPath="conf/config.properties";
 
 
 
     @Override
     public void run() {
-        ZkClient zkClient=new ZkClient(ZkConnectStr,4000);
+        zkClient=new ZkClient(ZkConnectStr,4000);
         zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
         zkClient.close();
-        BasicServer basicServer=new BasicServer();
-        basicServer.startup("conf/config.properties");
+        basicServer=new BasicServer();
+        basicServer.startup(configPath);
         basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
         basicServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
         try {
@@ -101,9 +133,13 @@ class ServerInThread implements Runnable{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
 
-
-
-
+    public void stopNow(){
+        try {
+            basicServer.directClose();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

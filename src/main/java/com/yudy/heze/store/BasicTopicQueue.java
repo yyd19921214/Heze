@@ -50,8 +50,6 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
 
     @Override
     public boolean offer(byte[] bytes) {
-        String t=new String(bytes);
-        System.out.println(t);
         if (ArrayUtils.isEmpty(bytes))
             return true;
         writeLock.lock();

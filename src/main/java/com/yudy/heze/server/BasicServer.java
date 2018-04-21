@@ -44,6 +44,8 @@ public class BasicServer implements MServer{
 
     private String zkPath;
 
+    private Thread shutDownHook;
+
     @Override
     public boolean startup(String configName) {
         File configFile;
@@ -86,7 +88,8 @@ public class BasicServer implements MServer{
             } else {
                 f = b.bind(config.getPort()).sync();
             }
-            Runtime.getRuntime().addShutdownHook(new BasicServer.ShutdownThread());
+            shutDownHook=new BasicServer.ShutdownThread();
+            Runtime.getRuntime().addShutdownHook(shutDownHook);
 
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -141,13 +144,20 @@ public class BasicServer implements MServer{
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
         // unregister from zk
+        BasicTopicQueuePool.destory();
         if (zkClient!=null&&StringUtils.isNotBlank(zkPath)&&zkClient.exists(zkPath)){
             zkClient.deleteRecursive(zkPath);
             zkClient.close();
         }
+
         LOGGER.info("Netty server stopped");
         System.out.println("Netty server stopped");
 
+    }
+
+    public void directClose() throws IOException {
+        Runtime.getRuntime().removeShutdownHook(shutDownHook);
+        close();
     }
 
     public void waitForClose() throws InterruptedException {
