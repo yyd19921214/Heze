@@ -22,7 +22,6 @@ public class ProducerRequestHandler implements RequestHandler {
 
             if (topics!=null){
                 for (Topic topic:topics){
-                    System.out.println(topic.getContent());
                     BasicTopicQueuePool.getQueueOrCreate(topic.getTopic()).offer(DataUtils.serialize(topic.getContent()));
 //                    TopicQueuePool.getQueueOrCreate(topic.getTopic()).offer(DataUtils.serialize(topic));
                 }

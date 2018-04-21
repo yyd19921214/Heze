@@ -102,7 +102,14 @@ public class BasicTopicQueuePool {
 
     private void disposal() {
         this.scheduler.shutdown();
-        queueMap.forEach((key,value)->{value.close();zkClient.delete(zkRootPath+"/"+key);});
+        for (String key:queueMap.keySet()){
+            queueMap.get(key).close();
+            if (zkClient.exists(zkRootPath+"/"+key)){
+                zkClient.delete(zkRootPath+"/"+key);
+            }
+
+        }
+//        queueMap.forEach((key,value)->{value.close();zkClient.delete(zkRootPath+"/"+key);});
     }
 
     private BasicTopicQueue getQueueFromPool(Map<String, BasicTopicQueue> queueMap, String queueName, String fileDir) {

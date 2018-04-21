@@ -9,6 +9,7 @@ import com.yudy.heze.network.Topic;
 import com.yudy.heze.network.TransferType;
 import com.yudy.heze.server.RequestHandler;
 import com.yudy.heze.util.DataUtils;
+import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.util.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.lang.StringUtils;
@@ -28,7 +29,7 @@ public class BasicProducer {
 
     //todo add scheduler to notify producer when new server register in zookeeper
     //todo add fail retry mechanism
-    //todo use producer Pool instead of singleton
+    //todo use clientPool instead of singleton
     //todo add ack mechanism
 
     private static final BasicProducer INSTANCE = new BasicProducer();
@@ -41,9 +42,13 @@ public class BasicProducer {
 
     public Map<String, String> serverIpMap = new ConcurrentHashMap<>();
 
+    private Scheduler scheduler=new Scheduler(1,"heze-producer-",false);
+
     private Random rand = new Random();
 
     public volatile String currentAddress;
+
+
 
     private BasicProducer() {
 
