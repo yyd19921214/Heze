@@ -38,7 +38,7 @@ public class ProducerTest {
         zkClient=new ZkClient(ZkConnectStr,4000);
     }
 
-    @Test
+//    @Test
     public void test001_Start(){
 
         ServerInThread st=new ServerInThread();
@@ -59,7 +59,7 @@ public class ProducerTest {
 
 
         BasicProducer producer=BasicProducer.getInstance();
-        producer.init("file:///heze/conf/config.properties");
+        producer.init("file:////Users/yangyudong/source.code.learn/Heze/conf/config.properties");
         Assert.assertTrue(!producer.serverIpMap.isEmpty());
         List<Topic> topics=new ArrayList<>();
         for (int i=1;i<=5;i++){
@@ -77,7 +77,7 @@ public class ProducerTest {
         params.clear();
         params.put("broker","MyServer02");
         boolean res2=producer.send(topics,params);
-        Assert.assertTrue(res);
+        Assert.assertTrue(res2);
 
 //        topicQueue = new BasicTopicQueue(topicName, fileDir);
 //        topicQueue.resetHead();
@@ -89,6 +89,39 @@ public class ProducerTest {
 ////            Assert.assertTrue(readStr.equals(String.format(topicContent,i)));
 //        }
 //        topicQueue.close();
+        st.stopNow();
+        st2.stopNow();
+
+    }
+
+    @Test
+    public void test002_ServerAutoFind(){
+        ServerInThread st=new ServerInThread();
+        Thread serverThread=new Thread(st);
+        serverThread.start();
+
+        try {
+            Thread.sleep(2000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        BasicProducer producer=BasicProducer.getInstance();
+        producer.init("file:////Users/yangyudong/source.code.learn/Heze/conf/config.properties");
+        Assert.assertEquals(1,producer.serverIpMap.size());
+
+        ServerInThread st2=new ServerInThread();
+        st2.configPath="conf/config2.properties";
+        Thread serverThread2=new Thread(st2);
+        serverThread2.start();
+        try {
+            Thread.sleep(5000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        Assert.assertEquals(2,producer.serverIpMap.size());
+
         st.stopNow();
         st2.stopNow();
 
