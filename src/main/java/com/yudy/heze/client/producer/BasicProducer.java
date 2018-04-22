@@ -1,5 +1,6 @@
 package com.yudy.heze.client.producer;
 
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.yudy.heze.client.NettyClient;
@@ -11,7 +12,10 @@ import com.yudy.heze.server.RequestHandler;
 import com.yudy.heze.util.DataUtils;
 import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.util.ZkUtils;
+import org.I0Itec.zkclient.IZkChildListener;
+import org.I0Itec.zkclient.IZkDataListener;
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,14 +82,53 @@ public class BasicProducer {
         zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
         if (zkClient.exists(ZkUtils.ZK_BROKER_GROUP)) {
             List<String> children = zkClient.getChildren(ZkUtils.ZK_BROKER_GROUP);
-
             for (String child : children) {
                 String zk_path = ZkUtils.ZK_BROKER_GROUP + "/" + child;
                 String ipPort = zkClient.readData(zk_path);
-
+//                zkClient.subscribeDataChanges("", new IZkDataListener() {
+//                });
                 serverIpMap.put(child, ipPort);
+                zkClient.subscribeDataChanges(zk_path, new IZkDataListener() {
+                    @Override
+                    public void handleDataChange(String s, Object o) throws Exception {
+
+                    }
+
+                    @Override
+                    public void handleDataDeleted(String s) throws Exception {
+                        System.out.println(s+" is deleted...");
+                        serverIpMap.remove(s.split("///"))
+                    }
+                });
             }
+            zkClient.subscribeChildChanges(ZkUtils.ZK_BROKER_GROUP, new IZkChildListener() {
+                @Override
+                public void handleChildChange(String s, List<String> list) throws Exception {
+                    if (!CollectionUtils.isEmpty(list)) {
+                        list.stream().filter(child -> !serverIpMap.containsKey(child) && zkClient.exists(ZkUtils.ZK_BROKER_GROUP + "/" + child)).forEach(
+                                child -> {
+                                    String zk_path = ZkUtils.ZK_BROKER_GROUP + "/" + child;
+                                    String ipPort = zkClient.readData(zk_path);
+                                    serverIpMap.put(child, ipPort);
+                                }
+                        );
+                    }
+                }
+
+            });
+
         }
+//        scheduler.scheduleWithRate(()->{
+//            List<String> children = zkClient.getChildren(ZkUtils.ZK_BROKER_GROUP);
+//            children.stream().filter(child->!serverIpMap.containsKey(child)).forEach(
+//                    child->{
+//
+//                        String zk_path = ZkUtils.ZK_BROKER_GROUP + "/" + child;
+//                        String ipPort = zkClient.readData(zk_path);
+//                        serverIpMap.put(child, ipPort);
+//                    }
+//            );
+//        },1000L,3000L);
     }
 
 
