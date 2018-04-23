@@ -17,11 +17,7 @@ public class ServerMainTest {
     static String ZkConnectStr="127.0.0.1:2181";
 
     public static void main(String[] args) {
-        File f=new File("data");
-//        f.listFiles(File)
-        Arrays.stream(f.listFiles((child) -> {
-            return child.getName().endsWith(".umq")&&child.isFile();
-        })).forEach(ff-> System.out.println(ff.getName()));
+
 //        ZkClient zkClient=new ZkClient(ZkConnectStr,4000);
 //        zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
 //

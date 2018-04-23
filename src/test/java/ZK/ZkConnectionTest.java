@@ -1,4 +1,4 @@
-package zk;
+package ZK;
 
 import com.yudy.heze.zk.ZkConnection;
 import org.apache.zookeeper.*;

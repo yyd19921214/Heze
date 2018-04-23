@@ -13,6 +13,7 @@ import org.I0Itec.zkclient.ZkClient;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -33,13 +34,15 @@ public class ProducerTest {
 
     private String fileDir="data";
 
+    private String producerConfFile="file:///D://heze/conf/config.properties";
+
     @BeforeClass
     public static void zkInit(){
         zkClient=new ZkClient(ZkConnectStr,4000);
     }
 
-//    @Test
-    public void test001_Start(){
+    @Test
+    public void test001_Start() throws InterruptedException {
 
         ServerInThread st=new ServerInThread();
         Thread serverThread=new Thread(st);
@@ -50,16 +53,10 @@ public class ProducerTest {
         Thread serverThread2=new Thread(st2);
         serverThread2.start();
 
-
-        try {
-            Thread.sleep(5000L);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        Thread.sleep(2000L);
 
         BasicProducer producer=BasicProducer.getInstance();
-        producer.init("file:////Users/yangyudong/source.code.learn/Heze/conf/config.properties");
+        producer.init(producerConfFile);
         Assert.assertTrue(!producer.serverIpMap.isEmpty());
         List<Topic> topics=new ArrayList<>();
         for (int i=1;i<=5;i++){
@@ -79,51 +76,48 @@ public class ProducerTest {
         boolean res2=producer.send(topics,params);
         Assert.assertTrue(res2);
 
-//        topicQueue = new BasicTopicQueue(topicName, fileDir);
-//        topicQueue.resetHead();
-//        for (int i=1;i<=10;i++){
-//            byte[] readData=topicQueue.poll();
-//            Assert.assertNotNull(readData);
-//            String readStr= (String) DataUtils.deserialize(readData);
-//            System.out.println(readStr);
-////            Assert.assertTrue(readStr.equals(String.format(topicContent,i)));
-//        }
-//        topicQueue.close();
+        topicQueue = new BasicTopicQueue(topicName, fileDir);
+        topicQueue.resetHead();
+        for (int i=1;i<=10;i++){
+            byte[] readData=topicQueue.poll();
+            Assert.assertNotNull(readData);
+            String readStr= (String) DataUtils.deserialize(readData);
+            System.out.println(readStr);
+        }
+        topicQueue.close();
         st.stopNow();
         st2.stopNow();
+        producer.stop();
 
     }
 
     @Test
-    public void test002_ServerAutoFind(){
+    public void test002_ServerAutoFind() throws InterruptedException {
         ServerInThread st=new ServerInThread();
         Thread serverThread=new Thread(st);
         serverThread.start();
+        Thread.sleep(2000L);
 
-        try {
-            Thread.sleep(2000L);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
         BasicProducer producer=BasicProducer.getInstance();
-        producer.init("file:////Users/yangyudong/source.code.learn/Heze/conf/config.properties");
+        producer.init(producerConfFile);
         Assert.assertEquals(1,producer.serverIpMap.size());
+
 
         ServerInThread st2=new ServerInThread();
         st2.configPath="conf/config2.properties";
         Thread serverThread2=new Thread(st2);
         serverThread2.start();
-        try {
-            Thread.sleep(5000L);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        Thread.sleep(2000L);
         Assert.assertEquals(2,producer.serverIpMap.size());
 
         st.stopNow();
+        Thread.sleep(2000L);
+        Assert.assertEquals(1,producer.serverIpMap.size());
         st2.stopNow();
+        Thread.sleep(2000L);
+        Assert.assertEquals(0,producer.serverIpMap.size());
+        producer.stop();
 
     }
 
@@ -131,6 +125,7 @@ public class ProducerTest {
 
     @AfterClass
     public static void doClean(){
+        ZkClient zkClient=new ZkClient(ZkConnectStr,4000);
         zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
         zkClient.close();
         File f=new File("data");
@@ -145,18 +140,13 @@ class ServerInThread implements Runnable{
 
 
 
-    private static final String ZkConnectStr="127.0.0.1:2181";
     BasicServer basicServer;
-    ZkClient zkClient;
     String configPath="conf/config.properties";
 
 
 
     @Override
     public void run() {
-        zkClient=new ZkClient(ZkConnectStr,4000);
-        zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
-        zkClient.close();
         basicServer=new BasicServer();
         basicServer.startup(configPath);
         basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());

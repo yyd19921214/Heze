@@ -1,5 +1,8 @@
 package com.yudy.heze.client.producer;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -25,15 +28,17 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
 public class BasicProducer {
 
-    //todo add scheduler to notify producer when new server register in zookeeper
+    //todo add scheduler to notify producer when new server register in zookeeper---done
     //todo add fail retry mechanism
-    //todo use clientPool instead of singleton
+    //todo use pool of netty client
     //todo add ack mechanism
 
     private static final BasicProducer INSTANCE = new BasicProducer();
@@ -44,14 +49,13 @@ public class BasicProducer {
 
     private ZkClient zkClient;
 
-    public Map<String, String> serverIpMap = new ConcurrentHashMap<>();
+    private LoadingCache<String, NettyClient> nettyClientCache;
 
-    private Scheduler scheduler=new Scheduler(1,"heze-producer-",false);
+    public Map<String, String> serverIpMap = new ConcurrentHashMap<>();
 
     private Random rand = new Random();
 
     public volatile String currentAddress;
-
 
 
     private BasicProducer() {
@@ -85,21 +89,8 @@ public class BasicProducer {
             for (String child : children) {
                 String zk_path = ZkUtils.ZK_BROKER_GROUP + "/" + child;
                 String ipPort = zkClient.readData(zk_path);
-//                zkClient.subscribeDataChanges("", new IZkDataListener() {
-//                });
                 serverIpMap.put(child, ipPort);
-                zkClient.subscribeDataChanges(zk_path, new IZkDataListener() {
-                    @Override
-                    public void handleDataChange(String s, Object o) throws Exception {
-
-                    }
-
-                    @Override
-                    public void handleDataDeleted(String s) throws Exception {
-                        System.out.println(s+" is deleted...");
-                        serverIpMap.remove(s.split("///"))
-                    }
-                });
+                subscribeRefresh(zk_path);
             }
             zkClient.subscribeChildChanges(ZkUtils.ZK_BROKER_GROUP, new IZkChildListener() {
                 @Override
@@ -110,6 +101,7 @@ public class BasicProducer {
                                     String zk_path = ZkUtils.ZK_BROKER_GROUP + "/" + child;
                                     String ipPort = zkClient.readData(zk_path);
                                     serverIpMap.put(child, ipPort);
+                                    subscribeRefresh(zk_path);
                                 }
                         );
                     }
@@ -118,22 +110,37 @@ public class BasicProducer {
             });
 
         }
-//        scheduler.scheduleWithRate(()->{
-//            List<String> children = zkClient.getChildren(ZkUtils.ZK_BROKER_GROUP);
-//            children.stream().filter(child->!serverIpMap.containsKey(child)).forEach(
-//                    child->{
-//
-//                        String zk_path = ZkUtils.ZK_BROKER_GROUP + "/" + child;
-//                        String ipPort = zkClient.readData(zk_path);
-//                        serverIpMap.put(child, ipPort);
-//                    }
-//            );
-//        },1000L,3000L);
+
+        nettyClientCache = CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.SECONDS).maximumSize(100)
+                .build(new CacheLoader<String, NettyClient>() {
+                    @Override
+                    public NettyClient load(String s) throws Exception {
+                        int count = 0;
+                        String ip=s.split(":")[0];
+                        int port=Integer.parseInt(s.split(":")[1]);
+                        NettyClient client = new NettyClient();
+                        while (count < 2) {
+                            try {
+                                client.open(ip, port);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                client.stop();
+                                client = new NettyClient();
+                            }
+                            if (client.isConnected()){
+                                return client;
+                            }
+                            count++;
+                        }
+                        return client;
+                    }
+                });
+
     }
 
 
     public boolean send(Topic topic) {
-        return send(topic,new RandomPartitioner());
+        return send(topic, new RandomPartitioner());
     }
 
     public boolean send(Topic topic, Function<Topic, String> f) {
@@ -160,17 +167,17 @@ public class BasicProducer {
         return false;
     }
 
-    private boolean send(Topic topic,String destIp, int destPort){
+    private boolean send(Topic topic, String destIp, int destPort) {
 
-        return send(Lists.newArrayList(topic),destIp,destPort);
+        return send(Lists.newArrayList(topic), destIp, destPort);
     }
 
-    public boolean send(Topic[] topics,Map<String, String> params){
+    public boolean send(Topic[] topics, Map<String, String> params) {
         return send(Arrays.asList(topics), params);
     }
 
 
-    public boolean send(List<Topic> topics,Map<String, String> params){
+    public boolean send(List<Topic> topics, Map<String, String> params) {
         String destAddress = null;
         if (params.containsKey("broker")) {
             String brokerName = params.get("broker");
@@ -187,14 +194,12 @@ public class BasicProducer {
     }
 
 
-
     private boolean send(List<Topic> topics, String destIp, int destPort) {
         boolean result = false;
         if (reconnect(destIp, destPort)) {
             Message request = Message.newRequestMessage();
             request.setReqHandlerType(RequestHandler.PRODUCER);
             request.setBody(DataUtils.serialize(topics));
-
             try {
                 Message response = client.write(request);
                 if (response == null || response.getType() == TransferType.EXCEPTION.value) {
@@ -209,7 +214,50 @@ public class BasicProducer {
         }
 
         return result;
+    }
 
+    private boolean send(List<Topic> topics, String destAddress) {
+        boolean result = false;
+        if (reconnect(destAddress)) {
+            Message request = Message.newRequestMessage();
+            request.setReqHandlerType(RequestHandler.PRODUCER);
+            request.setBody(DataUtils.serialize(topics));
+            try {
+                Message response = client.write(request);
+                if (response == null || response.getType() == TransferType.EXCEPTION.value) {
+                    result = false;
+                } else {
+                    result = true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        return result;
+    }
+
+    private void subscribeRefresh(String zk_path) {
+        zkClient.subscribeDataChanges(zk_path, new IZkDataListener() {
+            @Override
+            public void handleDataChange(String s, Object o) throws Exception {
+                System.out.println(s + " data is changed");
+                String changedServer = s.split("/")[3];
+                if (serverIpMap.containsKey(changedServer)) {
+                    serverIpMap.put(changedServer, (String) o);
+                }
+            }
+
+            @Override
+            public void handleDataDeleted(String s) throws Exception {
+                System.out.println(s + " is deleted...");
+                String removeServer = s.split("/")[3];
+                if (serverIpMap.containsKey(removeServer)) {
+                    serverIpMap.remove(removeServer);
+                }
+            }
+        });
     }
 
 
@@ -233,12 +281,23 @@ public class BasicProducer {
 
     }
 
+    public boolean reconnect(String adddress){
+        try {
+            return nettyClientCache.get(adddress).isConnected();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public void stop() {
         client.stop();
+        zkClient.unsubscribeAll();
+        zkClient = null;
     }
 
 
-    class RandomPartitioner implements Function<Topic,String>{
+    class RandomPartitioner implements Function<Topic, String> {
         @Override
         public String apply(Topic topic) {
             List<String> brokers = serverIpMap.keySet().stream().collect(Collectors.toList());
