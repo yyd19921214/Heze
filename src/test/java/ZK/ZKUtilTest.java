@@ -1,4 +1,4 @@
-package zk;
+package ZK;
 
 import com.yudy.heze.util.ZkUtils;
 import com.yudy.heze.zk.ZkClient;

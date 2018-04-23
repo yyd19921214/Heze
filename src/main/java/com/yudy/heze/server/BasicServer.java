@@ -149,7 +149,6 @@ public class BasicServer implements MServer{
             zkClient.deleteRecursive(zkPath);
             zkClient.close();
         }
-
         LOGGER.info("Netty server stopped");
         System.out.println("Netty server stopped");
 

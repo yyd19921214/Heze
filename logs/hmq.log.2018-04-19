@@ -1,0 +1,2 @@
+2018-04-19 12:14:52,317 [com.yudy.heze.client.producer.BasicProducer] - ERROR: Main config file not exist => 'D:\config.properties', copy one from 'conf/server.properties.sample' first.
+2018-04-19 12:19:20,434 [com.yudy.heze.client.producer.BasicProducer] - ERROR: Main config file not exist => 'D:\conf\config.properties', copy one from 'conf/server.properties.sample' first.
