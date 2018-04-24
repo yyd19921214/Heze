@@ -52,7 +52,6 @@ public class ProducerTest {
         st2.configPath="conf/config2.properties";
         Thread serverThread2=new Thread(st2);
         serverThread2.start();
-
         Thread.sleep(2000L);
 
         BasicProducer producer=BasicProducer.getInstance();
