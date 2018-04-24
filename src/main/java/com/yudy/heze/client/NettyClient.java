@@ -101,7 +101,6 @@ public class NettyClient {
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {
                     if (channelFuture.isSuccess()){
                         responseFuture.setIsOk(true);
-                        return;
                     }
                     else{
                         responseFuture.setIsOk(false);
@@ -114,9 +113,8 @@ public class NettyClient {
                 }
             });
         }
-
         try {
-            response=responseFuture.waitResponse(1000, TimeUnit.SECONDS);
+            response=responseFuture.waitResponse(5000, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -133,7 +131,14 @@ public class NettyClient {
             }
         }
         return response;
+    }
 
+    public boolean writeAsync(final Message request){
+        if (channel!=null) {
+            this.channel.writeAndFlush(request);
+            return true;
+        }
+        return false;
     }
 
     public void stop(){
