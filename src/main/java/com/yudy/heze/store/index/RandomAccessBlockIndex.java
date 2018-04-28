@@ -1,6 +1,5 @@
 package com.yudy.heze.store.index;
 
-import com.yudy.heze.store.TopicQueueIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Cleaner;
@@ -9,24 +8,22 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
-public class RandomAccessBlockIndex extends AbstractTopicQueueIndex implements TopicQueueIndex {
+public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
 
     private static Logger LOGGER = LoggerFactory.getLogger(RandomAccessBlockIndex.class);
 
 
     private final String indexName;
     private AtomicInteger totalNum;
-    private Map<Integer, Integer> offsetPosMap;
+    private ConcurrentSkipListMap<Long, Integer> offsetPosMap;
+    // 用来记录后续不断添加的记录
+    private ConcurrentSkipListMap<Long,Integer> appendMap=new ConcurrentSkipListMap<>();
     private volatile boolean loaded=false;
 
     //todo it need to be refactored thread safe initial
@@ -47,7 +44,7 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex implements T
                 //so it will be easy to get the tail pos of one block
                 this.offsetPosMap=new ConcurrentSkipListMap<>();
                 for (int i=1;i<=totalNum.get();i++){
-                    int offsetInBlock=this.indexFile.readInt();
+                    long offsetInBlock=this.indexFile.readLong();
                     int pos=this.indexFile.readInt();
                     offsetPosMap.put(offsetInBlock,pos);
                 }
@@ -68,14 +65,24 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex implements T
 
     }
 
-    public boolean updateIndex(int offsetInBlock,int postion){
+    public boolean updateIndex(long offsetInBlock,int postion){
         this.offsetPosMap.put(offsetInBlock,postion);
+        this.index.putLong(offsetInBlock);
+        this.index.putInt(postion);
         this.totalNum.getAndIncrement();
         return true;
     }
 
-    public int getPosition(int offsetInBlock){
+    public int getReadPosition(int offsetInBlock){
         return offsetPosMap.get(offsetInBlock);
+    }
+
+    public int getTotalNum(){
+        return this.totalNum.get();
+    }
+
+    public int getLastRecordPosition() {
+        return this.offsetPosMap.lastEntry().getValue();
     }
 
 
@@ -83,8 +90,23 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex implements T
     public void putMagic() {
         this.index.position(0);
         this.index.put(MAGIC.getBytes());
-
     }
+
+    public void putTotalNum(){
+        this.index.position(MAGIC.getBytes().length);
+        this.index.putInt(offsetPosMap.size());
+    }
+
+
+
+
+
+
+
+    /**----------------------------------------------------------------**/
+
+
+
 
     @Override
     public void putWritePosition(int writePosition) {

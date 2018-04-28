@@ -1,4 +1,6 @@
-package com.yudy.heze.store;
+package com.yudy.heze.store.block;
+
+import com.yudy.heze.store.index.TopicQueueIndex;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -16,7 +18,7 @@ abstract class AbstractQueueBlock {
 
     public static final int EOF = -1;
 
-    private String blockFilePath;
+    protected String blockFilePath;
 
     private TopicQueueIndex index;
 
@@ -56,7 +58,9 @@ abstract class AbstractQueueBlock {
         }
     }
 
-    abstract public AbstractQueueBlock duplicate();
+//    public AbstractQueueBlock duplicate(){
+//        return new AbstractQueueBlock(this.blockFilePath, this.index, this.byteBuffer.duplicate(), this.mappedBlock, this.fileChannel, this.blockFile);
+//    }
 
     abstract public void putEOF();
 

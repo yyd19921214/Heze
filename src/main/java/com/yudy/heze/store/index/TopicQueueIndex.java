@@ -1,4 +1,4 @@
-package com.yudy.heze.store;
+package com.yudy.heze.store.index;
 
 public interface TopicQueueIndex {
 

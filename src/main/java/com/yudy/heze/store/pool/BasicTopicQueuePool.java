@@ -1,7 +1,7 @@
-package com.yudy.heze.store;
+package com.yudy.heze.store.pool;
 
 import com.yudy.heze.config.ServerConfig;
-import com.yudy.heze.server.backup.BackupQueuePool;
+import com.yudy.heze.store.queue.BasicTopicQueue;
 import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.util.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;

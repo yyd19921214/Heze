@@ -1,6 +1,5 @@
 package com.yudy.heze.store.index;
 
-import com.yudy.heze.store.TopicQueueIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Cleaner;

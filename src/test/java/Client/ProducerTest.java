@@ -6,7 +6,7 @@ import com.yudy.heze.server.BasicServer;
 import com.yudy.heze.server.RequestHandler;
 import com.yudy.heze.server.handlers.FetchRequestHandler;
 import com.yudy.heze.server.handlers.ProducerRequestHandler;
-import com.yudy.heze.store.BasicTopicQueue;
+import com.yudy.heze.store.queue.BasicTopicQueue;
 import com.yudy.heze.util.DataUtils;
 import com.yudy.heze.util.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;

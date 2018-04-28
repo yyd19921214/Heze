@@ -5,11 +5,10 @@ import com.yudy.heze.network.Backup;
 import com.yudy.heze.network.Message;
 import com.yudy.heze.network.Topic;
 import com.yudy.heze.server.AbstractRequestHandler;
-import com.yudy.heze.store.TopicQueue;
-import com.yudy.heze.store.TopicQueuePool;
+import com.yudy.heze.store.queue.TopicQueue;
+import com.yudy.heze.store.pool.TopicQueuePool;
 import com.yudy.heze.util.DataUtils;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang.math.IntRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +17,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 public class ReplicaRequestHandler extends AbstractRequestHandler {
