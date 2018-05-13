@@ -1,7 +1,6 @@
-package com.yudy.heze.store.zk;
+package com.yudy.heze.store.index;
 
 import com.yudy.heze.cluster.Cluster;
-import com.yudy.heze.store.TopicQueueIndex;
 import com.yudy.heze.util.ZkUtils;
 import com.yudy.heze.zk.ZkClient;
 import org.apache.commons.lang.StringUtils;

@@ -1,7 +1,5 @@
 package com.yudy.heze.store.index;
 
-import com.yudy.heze.store.TopicQueueIndex;
-
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;

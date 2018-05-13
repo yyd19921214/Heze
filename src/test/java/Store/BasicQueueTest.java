@@ -1,7 +1,7 @@
 package Store;
 
-import com.yudy.heze.store.BasicTopicQueue;
-import com.yudy.heze.store.BasicTopicQueueBlock;
+import com.yudy.heze.store.queue.BasicTopicQueue;
+import com.yudy.heze.store.block.BasicTopicQueueBlock;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;

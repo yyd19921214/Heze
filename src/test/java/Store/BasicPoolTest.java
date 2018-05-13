@@ -1,7 +1,7 @@
 package Store;
 
 import com.yudy.heze.config.ServerConfig;
-import com.yudy.heze.store.BasicTopicQueuePool;
+import com.yudy.heze.store.pool.BasicTopicQueuePool;
 import org.I0Itec.zkclient.ZkClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;

@@ -1,8 +1,7 @@
 package com.yudy.heze.server.backup;
 
-import com.yudy.heze.store.TopicQueueIndex;
-import com.yudy.heze.store.disk.DiskTopicQueueIndex;
-import com.yudy.heze.store.zk.ZkTopicQueueReadIndex;
+import com.yudy.heze.store.index.DiskTopicQueueIndex;
+import com.yudy.heze.store.index.ZkTopicQueueReadIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Cleaner;
@@ -17,9 +16,9 @@ import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import static com.yudy.heze.store.TopicQueueBlock.BLOCK_FILE_SUFFIX;
-import static com.yudy.heze.store.TopicQueueBlock.BLOCK_SIZE;
-import static com.yudy.heze.store.TopicQueueBlock.EOF;
+import static com.yudy.heze.store.block.TopicQueueBlock.BLOCK_FILE_SUFFIX;
+import static com.yudy.heze.store.block.TopicQueueBlock.BLOCK_SIZE;
+import static com.yudy.heze.store.block.TopicQueueBlock.EOF;
 
 
 public class BackupQueueBlock {
