@@ -84,6 +84,10 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
         return this.offsetPosMap.lastEntry().getValue();
     }
 
+    public long getLastOffset(){
+        return 1L;
+    }
+
 
     @Override
     public void putMagic() {
