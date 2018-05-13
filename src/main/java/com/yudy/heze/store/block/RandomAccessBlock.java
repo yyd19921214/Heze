@@ -47,6 +47,10 @@ public class RandomAccessBlock extends AbstractQueueBlock {
         super(index,blockFilePath);
     }
 
+    public RandomAccessBlockIndex getIndex(){
+        return this.index;
+    }
+
 //    @Override
 //    public RandomAccessBlock duplicate() {
 //        return new RandomAccessBlock(this.blockFilePath, this.index, this.byteBuffer.duplicate(), this.mappedBlock, this.fileChannel, this.blockFile);
@@ -82,18 +86,23 @@ public class RandomAccessBlock extends AbstractQueueBlock {
      * @param bytes
      * @return
      */
-    @Override
-    public int write(byte[] bytes) {
-        int pos=index.getLastRecordPosition();
-        long offset=byteBuffer.getLong(pos);
-        int len=byteBuffer.getInt();
-        int skipToPos=pos+Long.BYTES+Integer.BYTES+len;
-        byteBuffer.position(skipToPos);
-        byteBuffer.putLong(offset+1);
-        byteBuffer.putInt(bytes.length);
-        byteBuffer.put(bytes);
-        index.updateIndex(offset+1,skipToPos);
-        return skipToPos;
+//    @Override
+//    public int write(byte[] bytes) {
+//        int pos=index.getLastRecordPosition();
+//        long offset=byteBuffer.getLong(pos);
+//        int len=byteBuffer.getInt();
+//        int skipToPos=pos+Long.BYTES+Integer.BYTES+len;
+//        byteBuffer.position(skipToPos);
+//        byteBuffer.putLong(offset+1);
+//        byteBuffer.putInt(bytes.length);
+//        byteBuffer.put(bytes);
+//        index.updateIndex(offset+1,skipToPos);
+//        return skipToPos;
+//    }
+
+    public long write(byte[] bytes) {
+        //todo return the offset
+        return 1L;
     }
 
 
