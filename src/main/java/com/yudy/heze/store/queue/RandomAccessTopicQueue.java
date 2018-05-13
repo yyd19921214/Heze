@@ -1,20 +1,15 @@
 package com.yudy.heze.store.queue;
 
-import com.yudy.heze.store.block.BasicTopicQueueBlock;
 import com.yudy.heze.store.block.RandomAccessBlock;
 import com.yudy.heze.store.index.RandomAccessBlockIndex;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class RandomAccessTopicQueue{
 
@@ -41,20 +36,6 @@ public class RandomAccessTopicQueue{
     }
 
 
-
-
-
-
-
-
-
-
-    public int size() {
-        //TODO
-        return -1;
-    }
-
-
     public boolean append(byte[] bytes) {
         if (ArrayUtils.isEmpty(bytes))
             return true;
@@ -78,13 +59,31 @@ public class RandomAccessTopicQueue{
         if(offset>maxOffset){
             return null;
         }
-        long firstOffset=searchReadBlockFirstOffset(offset);
-        String readIndexName=String.format("%s_%s_%s.umq",INDEX_PREFIX,queueName,String.valueOf(firstOffset));
-//        if (readIndexName.equals())
-//        if (firstOffset==this.wr)
+        RandomAccessBlock readBlock;
+        byte[] data=null;
+        readLock.lock();
+        try{
+            long firstOffset=searchReadBlockFirstOffset(offset);
+            String readIndexName=String.format("%s_%s_%s.umq",INDEX_PREFIX,queueName,String.valueOf(firstOffset));
+            if (readIndexName.equals(writeBlock.getIndex().getIndexName())){
+                //todo it need to be checked if thread safe
+                readBlock=this.writeBlock.duplicate();
+                data=readBlock.read(offset);
+            }
+            else{
+                RandomAccessBlockIndex readIndex=new RandomAccessBlockIndex(readIndexName,fileDir);
+                readBlock=new RandomAccessBlock(readIndex,fileDir);
+                data=readBlock.read(offset);
+                readBlock.close();
+                readIndex.close();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            readLock.unlock();
+        }
 
-
-        return null;
+        return data;
     }
 
     /**

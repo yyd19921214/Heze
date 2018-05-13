@@ -85,7 +85,13 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
     }
 
     public long getLastOffset(){
+        //todo
         return 1L;
+    }
+
+    public String getIndexName(){
+        //todo
+        return null;
     }
 
 

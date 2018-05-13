@@ -68,7 +68,7 @@ abstract class AbstractQueueBlock {
 
     abstract public boolean eof();
 
-    abstract public int write(byte[] bytes) ;
+    abstract public long write(byte[] bytes) ;
 
     abstract public byte[] read();
 

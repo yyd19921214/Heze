@@ -51,10 +51,10 @@ public class RandomAccessBlock extends AbstractQueueBlock {
         return this.index;
     }
 
-//    @Override
-//    public RandomAccessBlock duplicate() {
-//        return new RandomAccessBlock(this.blockFilePath, this.index, this.byteBuffer.duplicate(), this.mappedBlock, this.fileChannel, this.blockFile);
-//    }
+    public RandomAccessBlock duplicate() {
+        //todo need to be refined
+        return new RandomAccessBlock(this.blockFilePath, this.index, this.byteBuffer.duplicate(), this.mappedBlock, this.fileChannel, this.blockFile);
+    }
 
     @Override
     public void putEOF() {
@@ -101,7 +101,8 @@ public class RandomAccessBlock extends AbstractQueueBlock {
 //    }
 
     public long write(byte[] bytes) {
-        //todo return the offset
+        //todo
+        // write the message and return the offset of this message
         return 1L;
     }
 
@@ -115,6 +116,18 @@ public class RandomAccessBlock extends AbstractQueueBlock {
         byte[] bytes=new byte[len];
         byteBuffer.get(bytes);
         return bytes;
+    }
+
+    public byte[] read(long offset) {
+        //todo
+        return null;
+//        int pos=this.index.getReadPosition(offset);
+//        byteBuffer.position(pos);
+//        byteBuffer.getLong();
+//        int len=byteBuffer.getInt();
+//        byte[] bytes=new byte[len];
+//        byteBuffer.get(bytes);
+//        return bytes;
     }
 
     @Override
