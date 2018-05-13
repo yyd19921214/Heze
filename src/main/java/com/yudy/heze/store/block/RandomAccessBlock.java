@@ -72,6 +72,16 @@ public class RandomAccessBlock extends AbstractQueueBlock {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * the structure of single message is like this
+     * ----------------
+     * offset(long)
+     * len of message(int)
+     * contents of message(bytes)
+     * ----------------
+     * @param bytes
+     * @return
+     */
     @Override
     public int write(byte[] bytes) {
         int pos=index.getLastRecordPosition();

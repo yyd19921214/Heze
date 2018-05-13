@@ -19,18 +19,17 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
     private static Logger LOGGER = LoggerFactory.getLogger(RandomAccessBlockIndex.class);
 
 
-    private final String indexName;
+//    private final String indexName;
     private AtomicInteger totalNum;
     private ConcurrentSkipListMap<Long, Integer> offsetPosMap;
     // 用来记录后续不断添加的记录
-    private ConcurrentSkipListMap<Long,Integer> appendMap=new ConcurrentSkipListMap<>();
-    private volatile boolean loaded=false;
+//    private ConcurrentSkipListMap<Long,Integer> appendMap=new ConcurrentSkipListMap<>();
+//    private volatile boolean loaded=false;
 
     //todo it need to be refactored thread safe initial
     public RandomAccessBlockIndex(String indexName,String fileDir) {
         String indexFilePath = formatIndexFilePath(indexName, fileDir);
         File file = new File(indexFilePath);
-        this.indexName=indexName;
         try{
             if (file.exists()){
                 this.indexFile = new RandomAccessFile(file, "rw");
@@ -48,7 +47,7 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
                     int pos=this.indexFile.readInt();
                     offsetPosMap.put(offsetInBlock,pos);
                 }
-                loaded=true;
+//                loaded=true;
             }
             else{
                 this.indexFile = new RandomAccessFile(file, "rw");
@@ -57,7 +56,7 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
                 putMagic();
                 this.totalNum=new AtomicInteger(0);
                 this.offsetPosMap=new ConcurrentSkipListMap<>();
-                loaded=true;
+//                loaded=true;
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -90,6 +89,13 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
     public void putMagic() {
         this.index.position(0);
         this.index.put(MAGIC.getBytes());
+    }
+
+    @Override
+    public int getWritePosition(){
+        int lastPos=offsetPosMap.lastEntry().getValue();
+
+        return -1;
     }
 
     public void putTotalNum(){
@@ -167,17 +173,6 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
     public void sync() {
         if (index != null) {
             index.force();
-//            index.position(0);
-//            StringBuilder sb = new StringBuilder();
-//            byte[] bytes = new byte[8];
-//            index.get(bytes, 0, 8);
-//            sb.append("disk index").append("=>").append("readNum:").append(index.getInt())
-//                    .append(",readPosition:").append(index.getInt())
-//                    .append(",readCounter:").append(index.getInt())
-//                    .append(",writeNum:").append(index.getInt())
-//                    .append(",writePosition:").append(index.getInt())
-//                    .append(",writeCounter:").append(index.getInt());
-//            LOGGER.info(sb.toString());
         }
     }
 
