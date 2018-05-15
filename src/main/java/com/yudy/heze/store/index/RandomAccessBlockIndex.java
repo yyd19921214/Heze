@@ -94,6 +94,11 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
         return null;
     }
 
+    public int getReadPosition(long offsetInBlock){
+        return offsetPosMap.get(offsetInBlock);
+    }
+
+
 
     @Override
     public void putMagic() {
