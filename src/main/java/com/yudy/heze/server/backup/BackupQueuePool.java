@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.*;
 
-import static com.yudy.heze.store.TopicQueuePool.*;
+import static com.yudy.heze.store.pool.TopicQueuePool.*;
 
 public class BackupQueuePool {
 

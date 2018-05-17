@@ -8,15 +8,29 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-public class BasicTopicQueueIndex extends AbstractTopicQueueIndex implements TopicQueueIndex{
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BasicTopicQueueIndex.class);
+public class DiskTopicQueueIndex implements TopicQueueIndex {
 
-    public BasicTopicQueueIndex(String queueName, String fileDir) {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DiskTopicQueueIndex.class);
+
+    private static final String INDEX_FILE_SUFFIX = ".umq";
+    private volatile int readNum;        // 8   读索引文件号
+    private volatile int readPosition;   // 12   读索引位置
+    private volatile int readCounter;    // 16   总读取数量
+    private volatile int writeNum;       // 20  写索引文件号
+    private volatile int writePosition;  // 24  写索引位置
+    private volatile int writeCounter;   // 28 总写入数量
+
+    private RandomAccessFile indexFile;
+    private FileChannel fileChannel;
+    private MappedByteBuffer index;
+
+    public DiskTopicQueueIndex(String queueName, String fileDir) {
         String indexFilePath = formatIndexFilePath(queueName, fileDir);
         File file = new File(indexFilePath);
         try {
@@ -24,6 +38,7 @@ public class BasicTopicQueueIndex extends AbstractTopicQueueIndex implements Top
                 this.indexFile = new RandomAccessFile(file, "rw");
                 byte[] bytes = new byte[8];
                 this.indexFile.read(bytes, 0, 8);
+                System.out.println(new String(bytes));
                 if (!MAGIC.equals(new String(bytes))) {
                     throw new IllegalArgumentException("version mismatch");
                 }
@@ -57,8 +72,47 @@ public class BasicTopicQueueIndex extends AbstractTopicQueueIndex implements Top
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
+
+
     }
 
+    public static boolean isIndexFile(String fileName) {
+        return fileName.endsWith(INDEX_FILE_SUFFIX);
+    }
+
+    public static String formatIndexFilePath(String queueName, String fileBackupDir) {
+        return fileBackupDir + File.separator + String.format("tindex_%s%s", queueName, INDEX_FILE_SUFFIX);
+    }
+
+    @Override
+    public int getReadNum() {
+        return this.readNum;
+    }
+
+    @Override
+    public int getReadPosition() {
+        return this.readPosition;
+    }
+
+    @Override
+    public int getReadCounter() {
+        return this.readCounter;
+    }
+
+    @Override
+    public int getWriteNum() {
+        return this.writeNum;
+    }
+
+    @Override
+    public int getWritePosition() {
+        return this.writePosition;
+    }
+
+    @Override
+    public int getWriteCounter() {
+        return this.writeCounter;
+    }
 
     @Override
     public void putMagic() {
@@ -113,9 +167,11 @@ public class BasicTopicQueueIndex extends AbstractTopicQueueIndex implements Top
     @Override
     public void reset() {
         int size = writeCounter - readCounter;
+        //todo mean of reset
         putReadCounter(0);
         putWriteCounter(size);
-        if (size == 0) {
+        //TODO why readNum==writeNum???
+        if (size == 0 && readNum == writeNum) {
             putReadPosition(0);
             putWritePosition(0);
         }
@@ -135,7 +191,7 @@ public class BasicTopicQueueIndex extends AbstractTopicQueueIndex implements Top
                     .append(",writeNum:").append(index.getInt())
                     .append(",writePosition:").append(index.getInt())
                     .append(",writeCounter:").append(index.getInt());
-            LOGGER.info(sb.toString());
+
         }
     }
 
@@ -167,6 +223,4 @@ public class BasicTopicQueueIndex extends AbstractTopicQueueIndex implements Top
         }
 
     }
-
-
 }

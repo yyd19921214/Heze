@@ -7,8 +7,10 @@ public class CallableTest {
 
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        String s="0000000056";
-        System.out.println(Integer.parseInt(s));
+        Long l=4L;
+        System.out.println(Long.BYTES);
+//        String s="0000000056";
+//        System.out.println(Integer.parseInt(s));
 
 //        Thread t=new Thread(()->{
 //            int i=0;

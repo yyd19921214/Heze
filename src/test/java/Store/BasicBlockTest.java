@@ -1,6 +1,6 @@
 package Store;
 
-import com.yudy.heze.store.BasicTopicQueueBlock;
+import com.yudy.heze.store.block.BasicTopicQueueBlock;
 import com.yudy.heze.store.index.BasicTopicQueueIndex;
 import org.junit.*;
 import org.junit.runners.MethodSorters;

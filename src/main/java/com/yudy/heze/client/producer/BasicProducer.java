@@ -188,7 +188,7 @@ public class BasicProducer {
             if (Boolean.valueOf(params.getOrDefault("async","false"))){
                 try {
                     int retryCnt=0;
-                    while (result==false&&retryCnt<2){
+                    while (!result&&retryCnt<3){
                         Message response = client.write(request);
                         if (response == null || response.getType() == TransferType.EXCEPTION.value) {
                             result = false;

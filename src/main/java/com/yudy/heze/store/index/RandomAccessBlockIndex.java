@@ -1,6 +1,5 @@
-package com.yudy.heze.store.disk;
+package com.yudy.heze.store.index;
 
-import com.yudy.heze.store.TopicQueueIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Cleaner;
@@ -9,118 +8,126 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(RandomAccessBlockIndex.class);
 
 
-public class DiskTopicQueueIndex implements TopicQueueIndex {
+//    private final String indexName;
+    private AtomicInteger totalNum;
+    private ConcurrentSkipListMap<Long, Integer> offsetPosMap;
+    // 用来记录后续不断添加的记录
+//    private ConcurrentSkipListMap<Long,Integer> appendMap=new ConcurrentSkipListMap<>();
+//    private volatile boolean loaded=false;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DiskTopicQueueIndex.class);
-
-    private static final String INDEX_FILE_SUFFIX = ".umq";
-    private volatile int readNum;        // 8   读索引文件号
-    private volatile int readPosition;   // 12   读索引位置
-    private volatile int readCounter;    // 16   总读取数量
-    private volatile int writeNum;       // 20  写索引文件号
-    private volatile int writePosition;  // 24  写索引位置
-    private volatile int writeCounter;   // 28 总写入数量
-
-    private RandomAccessFile indexFile;
-    private FileChannel fileChannel;
-    private MappedByteBuffer index;
-
-    public DiskTopicQueueIndex(String queueName, String fileDir) {
-        String indexFilePath = formatIndexFilePath(queueName, fileDir);
+    //todo it need to be refactored thread safe initial
+    public RandomAccessBlockIndex(String indexName,String fileDir) {
+        String indexFilePath = formatIndexFilePath(indexName, fileDir);
         File file = new File(indexFilePath);
-        try {
-            if (file.exists()) {
+        try{
+            if (file.exists()){
                 this.indexFile = new RandomAccessFile(file, "rw");
                 byte[] bytes = new byte[8];
                 this.indexFile.read(bytes, 0, 8);
-                System.out.println(new String(bytes));
                 if (!MAGIC.equals(new String(bytes))) {
                     throw new IllegalArgumentException("version mismatch");
                 }
-
-                this.readNum = indexFile.readInt();
-                this.readPosition = indexFile.readInt();
-                this.readCounter = indexFile.readInt();
-
-                this.writeNum = indexFile.readInt();
-                this.writePosition = indexFile.readInt();
-                this.writeCounter = indexFile.readInt();
-
-                this.fileChannel = indexFile.getChannel();
-                this.index = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, INDEX_SIZE);
-                this.index = index.load();
-
-            } else {
+                this.totalNum=new AtomicInteger(this.indexFile.readInt());
+                //use ConcurrentSkipListMap to maintain an order
+                //so it will be easy to get the tail pos of one block
+                this.offsetPosMap=new ConcurrentSkipListMap<>();
+                for (int i=1;i<=totalNum.get();i++){
+                    long offsetInBlock=this.indexFile.readLong();
+                    int pos=this.indexFile.readInt();
+                    offsetPosMap.put(offsetInBlock,pos);
+                }
+//                loaded=true;
+            }
+            else{
                 this.indexFile = new RandomAccessFile(file, "rw");
                 this.fileChannel = indexFile.getChannel();
                 this.index = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, INDEX_SIZE);
-
                 putMagic();
-                putReadNum(0);
-                putReadPosition(0);
-                putReadCounter(0);
-
-                putWriteNum(0);
-                putWritePosition(0);
-                putWriteCounter(0);
+                this.totalNum=new AtomicInteger(0);
+                this.offsetPosMap=new ConcurrentSkipListMap<>();
+//                loaded=true;
             }
-        } catch (Exception e) {
-            throw new IllegalArgumentException(e);
+        }catch (Exception e){
+            e.printStackTrace();
         }
 
-
     }
 
-    public static boolean isIndexFile(String fileName) {
-        return fileName.endsWith(INDEX_FILE_SUFFIX);
+    public boolean updateIndex(long offsetInBlock,int postion){
+        this.offsetPosMap.put(offsetInBlock,postion);
+        this.index.putLong(offsetInBlock);
+        this.index.putInt(postion);
+        this.totalNum.getAndIncrement();
+        return true;
     }
 
-    public static String formatIndexFilePath(String queueName, String fileBackupDir) {
-        return fileBackupDir + File.separator + String.format("tindex_%s%s", queueName, INDEX_FILE_SUFFIX);
+    public int getReadPosition(int offsetInBlock){
+        return offsetPosMap.get(offsetInBlock);
     }
 
-    @Override
-    public int getReadNum() {
-        return this.readNum;
+    public int getTotalNum(){
+        return this.totalNum.get();
     }
 
-    @Override
-    public int getReadPosition() {
-        return this.readPosition;
+    public int getLastRecordPosition() {
+        return this.offsetPosMap.lastEntry().getValue();
     }
 
-    @Override
-    public int getReadCounter() {
-        return this.readCounter;
+    public long getLastOffset(){
+        //todo
+        return 1L;
     }
 
-    @Override
-    public int getWriteNum() {
-        return this.writeNum;
+    public String getIndexName(){
+        //todo
+        return null;
     }
 
-    @Override
-    public int getWritePosition() {
-        return this.writePosition;
+    public int getReadPosition(long offsetInBlock){
+        return offsetPosMap.get(offsetInBlock);
     }
 
-    @Override
-    public int getWriteCounter() {
-        return this.writeCounter;
-    }
+
 
     @Override
     public void putMagic() {
         this.index.position(0);
         this.index.put(MAGIC.getBytes());
-
     }
+
+    @Override
+    public int getWritePosition(){
+        int lastPos=offsetPosMap.lastEntry().getValue();
+
+        return -1;
+    }
+
+    public void putTotalNum(){
+        this.index.position(MAGIC.getBytes().length);
+        this.index.putInt(offsetPosMap.size());
+    }
+
+
+
+
+
+
+
+    /**----------------------------------------------------------------**/
+
+
+
 
     @Override
     public void putWritePosition(int writePosition) {
@@ -165,14 +172,13 @@ public class DiskTopicQueueIndex implements TopicQueueIndex {
         this.readCounter = readCounter;
     }
 
+
     @Override
     public void reset() {
         int size = writeCounter - readCounter;
-        //todo mean of reset
         putReadCounter(0);
         putWriteCounter(size);
-        //TODO why readNum==writeNum???
-        if (size == 0 && readNum == writeNum) {
+        if (size == 0) {
             putReadPosition(0);
             putWritePosition(0);
         }
@@ -182,17 +188,6 @@ public class DiskTopicQueueIndex implements TopicQueueIndex {
     public void sync() {
         if (index != null) {
             index.force();
-            index.position(0);
-            StringBuilder sb = new StringBuilder();
-            byte[] bytes = new byte[8];
-            index.get(bytes, 0, 8);
-            sb.append("disk index").append("=>").append("readNum:").append(index.getInt())
-                    .append(",readPosition:").append(index.getInt())
-                    .append(",readCounter:").append(index.getInt())
-                    .append(",writeNum:").append(index.getInt())
-                    .append(",writePosition:").append(index.getInt())
-                    .append(",writeCounter:").append(index.getInt());
-
         }
     }
 
@@ -224,4 +219,6 @@ public class DiskTopicQueueIndex implements TopicQueueIndex {
         }
 
     }
+
+
 }
