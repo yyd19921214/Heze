@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class BasicProducer {
 
     //todo add scheduler to notify producer when new server register in zookeeper---done
-    //todo add aysnc producer mechanism---done not very perfect
+    //todo add async producer mechanism---done not very perfect
     //todo use pool of netty client---done
     //todo add ack mechanism/fail retry mechanism
 
@@ -47,7 +47,6 @@ public class BasicProducer {
     public Map<String, String> serverIpMap = new ConcurrentHashMap<>();
 
     private Random rand = new Random();
-
 
     private BasicProducer() {
 
