@@ -44,6 +44,8 @@ public class RandomAccessBlockIndex2 {
             if (file.exists()) {
                 this.accessFile = new RandomAccessFile(file, "rw");
                 totalNum = new AtomicInteger(accessFile.readInt());
+
+                
 //                for (int i=1;i<=totalNum.get();i++){
 //                    long offsetInBlock=accessFile.readLong();
 //                    int pos=accessFile.readInt();
