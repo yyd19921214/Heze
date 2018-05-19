@@ -8,202 +8,136 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
+/**
+ * the structure of index is below
+ * --------------------------
+ * <p>
+ * total number of message in this index  int
+ * message1 offset  long
+ * message1 position  int
+ * message2 offset  long
+ * message2 position  int
+ * message3 offset  long
+ * message3 position  int
+ * ---------------------------
+ */
+public class RandomAccessBlockIndex {
 
     private static Logger LOGGER = LoggerFactory.getLogger(RandomAccessBlockIndex.class);
+    public static final int INDEX_SIZE = 1*1024*1024;
 
-
-//    private final String indexName;
+    private String indexName;
     private AtomicInteger totalNum;
     private ConcurrentSkipListMap<Long, Integer> offsetPosMap;
-    // 用来记录后续不断添加的记录
-//    private ConcurrentSkipListMap<Long,Integer> appendMap=new ConcurrentSkipListMap<>();
-//    private volatile boolean loaded=false;
+    private long startFromOffset;
 
-    //todo it need to be refactored thread safe initial
-    public RandomAccessBlockIndex(String indexName,String fileDir) {
-        String indexFilePath = formatIndexFilePath(indexName, fileDir);
+    private RandomAccessFile accessFile;
+    private FileChannel fileChannel;
+    private MappedByteBuffer buffer;
+
+
+    public RandomAccessBlockIndex(String indexName, String fileDir) {
+        this.indexName = indexName;
+        startFromOffset=extractStartOffset(indexName);
+        String indexFilePath = fileDir + File.separator + indexName;
         File file = new File(indexFilePath);
-        try{
-            if (file.exists()){
-                this.indexFile = new RandomAccessFile(file, "rw");
-                byte[] bytes = new byte[8];
-                this.indexFile.read(bytes, 0, 8);
-                if (!MAGIC.equals(new String(bytes))) {
-                    throw new IllegalArgumentException("version mismatch");
+        offsetPosMap = new ConcurrentSkipListMap<>();
+        try {
+            if (file.exists()) {
+                accessFile = new RandomAccessFile(file, "rw");
+                totalNum = new AtomicInteger(accessFile.readInt());
+                for (int i = 1; i <= totalNum.get(); i++) {
+                    long offset = accessFile.readLong();
+                    int position = accessFile.readInt();
+                    offsetPosMap.put(offset, position);
                 }
-                this.totalNum=new AtomicInteger(this.indexFile.readInt());
-                //use ConcurrentSkipListMap to maintain an order
-                //so it will be easy to get the tail pos of one block
-                this.offsetPosMap=new ConcurrentSkipListMap<>();
-                for (int i=1;i<=totalNum.get();i++){
-                    long offsetInBlock=this.indexFile.readLong();
-                    int pos=this.indexFile.readInt();
-                    offsetPosMap.put(offsetInBlock,pos);
-                }
-//                loaded=true;
+                fileChannel = accessFile.getChannel();
+                buffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, INDEX_SIZE);
+                buffer = buffer.load();
+            } else {
+                accessFile = new RandomAccessFile(file, "rw");
+                fileChannel = accessFile.getChannel();
+                buffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, INDEX_SIZE);
+                buffer.position(0);
+                buffer.putInt(0);
+                totalNum = new AtomicInteger(0);
             }
-            else{
-                this.indexFile = new RandomAccessFile(file, "rw");
-                this.fileChannel = indexFile.getChannel();
-                this.index = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, INDEX_SIZE);
-                putMagic();
-                this.totalNum=new AtomicInteger(0);
-                this.offsetPosMap=new ConcurrentSkipListMap<>();
-//                loaded=true;
-            }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
-    public boolean updateIndex(long offsetInBlock,int postion){
-        this.offsetPosMap.put(offsetInBlock,postion);
-        this.index.putLong(offsetInBlock);
-        this.index.putInt(postion);
-        this.totalNum.getAndIncrement();
+    public boolean updateIndex(long offset, int position) {
+        if (offsetPosMap.containsKey(offset)) {
+            throw new IllegalArgumentException("offset has been write");
+        }
+        offsetPosMap.put(offset, position);
+
+        buffer.putLong(offset);
+        buffer.putInt(position);
+        totalNum.incrementAndGet();
         return true;
     }
 
-    public int getReadPosition(int offsetInBlock){
-        return offsetPosMap.get(offsetInBlock);
+    public int getReadPosition(long offset) {
+        if (!offsetPosMap.containsKey(offset)){
+            throw new IllegalArgumentException(String.format("offset %d not existed",offset));
+        }
+        return offsetPosMap.get(offset);
     }
 
-    public int getTotalNum(){
+    public int getTotalNum() {
         return this.totalNum.get();
     }
 
     public int getLastRecordPosition() {
-        return this.offsetPosMap.lastEntry().getValue();
-    }
-
-    public long getLastOffset(){
-        //todo
-        return 1L;
-    }
-
-    public String getIndexName(){
-        //todo
-        return null;
-    }
-
-    public int getReadPosition(long offsetInBlock){
-        return offsetPosMap.get(offsetInBlock);
-    }
-
-
-
-    @Override
-    public void putMagic() {
-        this.index.position(0);
-        this.index.put(MAGIC.getBytes());
-    }
-
-    @Override
-    public int getWritePosition(){
-        int lastPos=offsetPosMap.lastEntry().getValue();
-
+        if (!offsetPosMap.isEmpty()){
+            return offsetPosMap.lastEntry().getValue();
+        }
         return -1;
     }
 
-    public void putTotalNum(){
-        this.index.position(MAGIC.getBytes().length);
-        this.index.putInt(offsetPosMap.size());
-    }
-
-
-
-
-
-
-
-    /**----------------------------------------------------------------**/
-
-
-
-
-    @Override
-    public void putWritePosition(int writePosition) {
-        this.index.position(WRITE_POS_OFFSET);
-        this.index.putInt(writePosition);
-        this.writePosition = writePosition;
-    }
-
-    @Override
-    public void putWriteNum(int writeNum) {
-        this.index.position(WRITE_NUM_OFFSET);
-        this.index.putInt(writeNum);
-        this.writeNum = writeNum;
-    }
-
-    @Override
-    public void putWriteCounter(int writeCounter) {
-        this.index.position(WRITE_CNT_OFFSET);
-        this.index.putInt(writeCounter);
-        this.writeCounter = writeCounter;
-    }
-
-    @Override
-    public void putReadNum(int readNum) {
-        this.index.position(READ_NUM_OFFSET);
-        this.index.putInt(readNum);
-        this.readNum = readNum;
-
-    }
-
-    @Override
-    public void putReadPosition(int readPosition) {
-        this.index.position(READ_POS_OFFSET);
-        this.index.putInt(readPosition);
-        this.readPosition = readPosition;
-    }
-
-    @Override
-    public void putReadCounter(int readCounter) {
-        this.index.position(READ_CNT_OFFSET);
-        this.index.putInt(readCounter);
-        this.readCounter = readCounter;
-    }
-
-
-    @Override
-    public void reset() {
-        int size = writeCounter - readCounter;
-        putReadCounter(0);
-        putWriteCounter(size);
-        if (size == 0) {
-            putReadPosition(0);
-            putWritePosition(0);
+    public long getLastOffset() {
+        if (!offsetPosMap.isEmpty()){
+            return offsetPosMap.lastKey();
+        }
+        else{
+            return startFromOffset;
         }
     }
 
-    @Override
+    public String getIndexName() {
+        return indexName;
+    }
+
     public void sync() {
-        if (index != null) {
-            index.force();
+        if (buffer != null) {
+            buffer.position(0);
+            buffer.putInt(totalNum.get());
+            buffer.force();
         }
+
     }
 
-    @Override
-    public void close() {
+    public void close(){
         try {
-            if (index == null) {
+            if (buffer == null) {
                 return;
             }
             sync();
             AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 public Object run() {
                     try {
-                        Method getCleanerMethod = index.getClass().getMethod("cleaner");
+                        Method getCleanerMethod = buffer.getClass().getMethod("cleaner");
                         getCleanerMethod.setAccessible(true);
-                        Cleaner cleaner = (Cleaner) getCleanerMethod.invoke(index);
+                        Cleaner cleaner = (Cleaner) getCleanerMethod.invoke(buffer);
                         cleaner.clean();
                     } catch (Exception e) {
                         LOGGER.error("close fqueue index file failed", e);
@@ -211,13 +145,20 @@ public class RandomAccessBlockIndex extends AbstractTopicQueueIndex {
                     return null;
                 }
             });
-            index = null;
+            buffer = null;
             fileChannel.close();
-            indexFile.close();
+            accessFile.close();
         } catch (IOException e) {
             LOGGER.error("close fqueue index file failed", e);
         }
 
+    }
+
+    private long extractStartOffset(String indexName){
+        String[] fields=indexName.split("_");
+        String offsetPart=fields[fields.length-1];
+        offsetPart=offsetPart.replace(".umq","");
+        return Long.parseLong(offsetPart);
     }
 
 
