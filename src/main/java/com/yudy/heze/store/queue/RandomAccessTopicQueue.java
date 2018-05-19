@@ -86,6 +86,20 @@ public class RandomAccessTopicQueue{
         return data;
     }
 
+    public boolean close(){
+        writeLock.lock();
+        try{
+            writeBlock.close();
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }finally {
+            writeLock.unlock();
+        }
+        return true;
+    }
+
+
     /**
      * the index name is like: index_{queueName}_{first offset of this index}.umq
      * the block name if like: block_{queueName}_{first offset of this block}.umq
@@ -128,7 +142,7 @@ public class RandomAccessTopicQueue{
         offsetList.sort(Comparator.naturalOrder());
         long searchOffset=0;
         for(int i=0;i<offsetList.size();i++){
-            if (offsetList.get(i)<=offset&&(offsetList.get(i+1)>offset||i==offsetList.size()-1)){
+            if (offsetList.get(i)<offset&&(i==offsetList.size()-1||offsetList.get(i+1)>=offset)){
                 searchOffset=offsetList.get(i);
                 break;
             }
@@ -138,13 +152,14 @@ public class RandomAccessTopicQueue{
 
     private void rotateNextWriteBlock() {
         long offset=this.writeBlock.getIndex().getLastOffset();
-        offset+=1;
         RandomAccessBlockIndex writeIndex=new RandomAccessBlockIndex(String.format("%s_%s_%s.umq",INDEX_PREFIX,queueName,String.valueOf(offset)),fileDir);
         RandomAccessBlock writeBlock = new RandomAccessBlock(writeIndex, fileDir);
         this.writeBlock.sync();
         this.writeBlock.close();
         this.writeBlock=writeBlock;
     }
+
+
 
 
 
