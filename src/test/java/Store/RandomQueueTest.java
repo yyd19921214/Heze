@@ -68,14 +68,14 @@ public class RandomQueueTest {
         }
         topicQueue.close();
 
-//        topicQueue = new RandomAccessTopicQueue(queueName, fileDir);
-//        for (int i = 41; i <= 60; i++) {
-//            topicQueue.append(String.format(writeData, i).getBytes());
-//        }
-//        for (int i = 1; i <= 60; i++) {
-//            Assert.assertTrue(new String(topicQueue.read(i)).equals(String.format(writeData, i)));
-//        }
-//        topicQueue.close();
+        topicQueue = new RandomAccessTopicQueue(queueName, fileDir);
+        for (int i = 41; i <= 60; i++) {
+            topicQueue.append(String.format(writeData, i).getBytes());
+        }
+        for (int i = 1; i <= 60; i++) {
+            Assert.assertTrue(new String(topicQueue.read(i)).equals(String.format(writeData, i)));
+        }
+        topicQueue.close();
         doClean();
     }
 
