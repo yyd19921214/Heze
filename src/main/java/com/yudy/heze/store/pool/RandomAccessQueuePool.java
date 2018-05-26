@@ -1,13 +1,11 @@
 package com.yudy.heze.store.pool;
 
 import com.yudy.heze.config.ServerConfig;
-import com.yudy.heze.store.queue.BasicTopicQueue;
 import com.yudy.heze.store.queue.RandomAccessTopicQueue;
 import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.util.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +29,7 @@ public class RandomAccessQueuePool {
 
     private Map<String, RandomAccessTopicQueue> queueMap;
 
-    private String zkRootPath;
+    public String zkRootPath;
 
     private ZkClient zkClient;
 
@@ -42,6 +40,26 @@ public class RandomAccessQueuePool {
     public synchronized static void startup(ZkClient zkClient, ServerConfig config) {
         if (INSTANCE == null)
             INSTANCE = new RandomAccessQueuePool(zkClient, config);
+    }
+
+    public synchronized static void destroy(){
+        if (INSTANCE != null) {
+            INSTANCE.disposal();
+            INSTANCE = null;
+        }
+    }
+
+    public synchronized static RandomAccessTopicQueue getQueue(String queueName) {
+        if (INSTANCE.queueMap.containsKey(queueName))
+            return INSTANCE.queueMap.get(queueName);
+        return null;
+    }
+
+    public synchronized static RandomAccessTopicQueue getQueueOrCreate(String queueName){
+        RandomAccessTopicQueue topicQueue;
+        String fileDir = INSTANCE.filePath;
+        topicQueue= INSTANCE.getQueueFromPool(INSTANCE.queueMap, queueName, fileDir);
+        return topicQueue;
     }
 
     private RandomAccessQueuePool(ZkClient zkClient, ServerConfig config) {
@@ -77,6 +95,27 @@ public class RandomAccessQueuePool {
             }
         }
         return existFQueues;
+    }
+
+    private RandomAccessTopicQueue getQueueFromPool(Map<String, RandomAccessTopicQueue> queueMap, String queueName, String fileDir) {
+        if (queueMap.containsKey(queueName))
+            return queueMap.get(queueName);
+        RandomAccessTopicQueue queue = new RandomAccessTopicQueue(queueName, fileDir);
+        queueMap.put(queueName, queue);
+        zkClient.createPersistent(zkRootPath+"/"+queueName,false);
+        return queue;
+    }
+
+
+    private void disposal() {
+        this.scheduler.shutdown();
+        for (String key:queueMap.keySet()){
+            queueMap.get(key).close();
+            if (zkClient.exists(zkRootPath+"/"+key)){
+                zkClient.delete(zkRootPath+"/"+key);
+            }
+
+        }
     }
 
 

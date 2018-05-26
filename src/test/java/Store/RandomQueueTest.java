@@ -1,8 +1,6 @@
 package Store;
 
-import com.yudy.heze.store.block.BasicTopicQueueBlock;
 import com.yudy.heze.store.block.RandomAccessBlock;
-import com.yudy.heze.store.queue.BasicTopicQueue;
 import com.yudy.heze.store.queue.RandomAccessTopicQueue;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,7 +50,7 @@ public class RandomQueueTest {
             Assert.assertTrue(new String(topicQueue.read(i)).equals(String.format(writeData, i)));
         }
         topicQueue.close();
-        doClean();
+       // doClean();
     }
 
     //测试发送较多消息，涉及block的重新分配
@@ -68,14 +66,14 @@ public class RandomQueueTest {
         }
         topicQueue.close();
 
-//        topicQueue = new RandomAccessTopicQueue(queueName, fileDir);
-//        for (int i = 41; i <= 60; i++) {
-//            topicQueue.append(String.format(writeData, i).getBytes());
-//        }
-//        for (int i = 1; i <= 60; i++) {
-//            Assert.assertTrue(new String(topicQueue.read(i)).equals(String.format(writeData, i)));
-//        }
-//        topicQueue.close();
+        topicQueue = new RandomAccessTopicQueue(queueName, fileDir);
+        for (int i = 41; i <= 60; i++) {
+            topicQueue.append(String.format(writeData, i).getBytes());
+        }
+        for (int i = 1; i <= 60; i++) {
+            Assert.assertTrue(new String(topicQueue.read(i)).equals(String.format(writeData, i)));
+        }
+        topicQueue.close();
         doClean();
     }
 

@@ -111,7 +111,6 @@ public class RandomAccessTopicQueue{
                         result.put(prefetchOffset,data);
                     }
                 }
-
             }
             else{
                 RandomAccessBlockIndex readIndex=new RandomAccessBlockIndex(readIndexName,fileDir);
@@ -128,7 +127,6 @@ public class RandomAccessTopicQueue{
                         result.put(prefetchOffset,data);
                     }
                 }
-
                 readBlock.close();
                 readIndex.close();
             }
