@@ -101,14 +101,14 @@ public class BasicProducer {
         }
 
         nettyClientCache = CacheBuilder.newBuilder().removalListener(
-                (RemovalNotification<String, NettyClient> notify)->notify.getValue().stop()
+                (RemovalNotification<String, NettyClient> notify) -> notify.getValue().stop()
         ).expireAfterAccess(10, TimeUnit.SECONDS).maximumSize(100)
                 .build(new CacheLoader<String, NettyClient>() {
                     @Override
                     public NettyClient load(String s) throws Exception {
                         int count = 0;
-                        String ip=s.split(":")[0];
-                        int port=Integer.parseInt(s.split(":")[1]);
+                        String ip = s.split(":")[0];
+                        int port = Integer.parseInt(s.split(":")[1]);
                         while (count < 2) {
                             NettyClient client = new NettyClient();
                             try {
@@ -118,7 +118,7 @@ public class BasicProducer {
                                 client.stop();
                                 client = new NettyClient();
                             }
-                            if (client.isConnected()){
+                            if (client.isConnected()) {
                                 return client;
                             }
                             count++;
@@ -126,7 +126,6 @@ public class BasicProducer {
                         return null;
                     }
                 });
-
     }
 
 
@@ -150,13 +149,13 @@ public class BasicProducer {
             destAddress = params.get("brokerAddr");
         }
         if (StringUtils.isNotBlank(destAddress)) {
-            return send(topic, destAddress,params);
+            return send(topic, destAddress, params);
         }
         return false;
     }
 
-    private boolean send(Topic topic, String destAddress,Map<String, String> params) {
-        return send(Lists.newArrayList(topic), destAddress,params);
+    private boolean send(Topic topic, String destAddress, Map<String, String> params) {
+        return send(Lists.newArrayList(topic), destAddress, params);
     }
 
     public boolean send(Topic[] topics, Map<String, String> params) {
@@ -173,22 +172,22 @@ public class BasicProducer {
             destAddress = params.get("brokerAddr");
         }
         if (StringUtils.isNotBlank(destAddress)) {
-            return send(topics, destAddress,params);
+            return send(topics, destAddress, params);
         }
         return false;
     }
 
-    private boolean send(List<Topic> topics, String destAddress,Map<String, String> params) {
+    private boolean send(List<Topic> topics, String destAddress, Map<String, String> params) {
         boolean result = false;
-        NettyClient client=getNettyClientFromCache(destAddress);
-        if (client!=null) {
+        NettyClient client = getNettyClientFromCache(destAddress);
+        if (client != null) {
             Message request = Message.newRequestMessage();
             request.setReqHandlerType(RequestHandler.PRODUCER);
             request.setBody(DataUtils.serialize(topics));
-            if (Boolean.valueOf(params.getOrDefault("async","false"))){
+            if (!Boolean.valueOf(params.getOrDefault("async", "false"))) {
                 try {
-                    int retryCnt=0;
-                    while (!result&&retryCnt<3){
+                    int retryCnt = 0;
+                    while (!result && retryCnt < 3) {
                         Message response = client.write(request);
                         if (response == null || response.getType() == TransferType.EXCEPTION.value) {
                             result = false;
@@ -201,9 +200,8 @@ public class BasicProducer {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
-            else{
-                result=client.writeAsync(request);
+            } else {
+                result = client.writeAsync(request);
             }
         }
         return result;
@@ -232,9 +230,9 @@ public class BasicProducer {
     }
 
 
-    private NettyClient getNettyClientFromCache(String path){
+    private NettyClient getNettyClientFromCache(String path) {
         try {
-            NettyClient client=nettyClientCache.get(path);
+            NettyClient client = nettyClientCache.get(path);
             return client;
         } catch (ExecutionException e) {
             e.printStackTrace();
@@ -246,7 +244,7 @@ public class BasicProducer {
 
     public void stop() {
         nettyClientCache.invalidateAll();
-        nettyClientCache=null;
+        nettyClientCache = null;
         zkClient.unsubscribeAll();
         zkClient = null;
     }

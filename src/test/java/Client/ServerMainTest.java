@@ -13,46 +13,34 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-class A{
+import static com.yudy.heze.util.ZkUtils.ZK_BROKER_GROUP;
 
-}
-class B extends A{
-
-}
 public class ServerMainTest {
 
-    public void fun(List<? extends A> l){
+    private static BasicServer basicServer;
 
-    }
+    private static String configPath="conf/config.properties";
 
-    static BasicServer basicServer;
+    private static ZkClient zkClient;
 
-    static String ZkConnectStr="127.0.0.1:2181";
+    private static String ZkConnectStr="127.0.0.1:2181";
 
     public static void main(String[] args) {
-        A a=new A();
-        B b=new B();
-        List<B> l=new ArrayList();
-        l.add(b);
-        ServerMainTest smt=new ServerMainTest();
+        zkClient=new ZkClient(ZkConnectStr,4000);
+        zkClient.deleteRecursive(ZK_BROKER_GROUP);
+        basicServer=new BasicServer();
+        basicServer.startup(configPath);
+        basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
+        basicServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
+        try {
+            basicServer.waitForClose();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
-
-
-//        ZkClient zkClient=new ZkClient(ZkConnectStr,4000);
-//        zkClient.deleteRecursive(ZkUtils.ZK_BROKER_GROUP);
-//
-//        zkClient.close();
-//        basicServer=new BasicServer();
-////        basicServer.
-//        basicServer.startup("conf/config.properties");
-//        basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
-//        basicServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
-//        try {
-//            basicServer.waitForClose();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
     }
+
+
 
 
 }

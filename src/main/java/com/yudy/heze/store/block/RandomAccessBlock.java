@@ -16,6 +16,17 @@ import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+
+/**
+ * Block File format is like this
+ * -----------------
+ * offset1
+ * len1
+ * contents1[]
+ * offset2
+ * len2
+ * contents2[]
+ */
 public class RandomAccessBlock {
 
     private final Logger LOG = LoggerFactory.getLogger(RandomAccessBlock.class);
@@ -68,37 +79,30 @@ public class RandomAccessBlock {
     }
 
     public boolean isSpaceAvailable(int len) {
-        int lastRecordPos=index.getLastRecordPosition();
-        byteBuffer.getLong(lastRecordPos);
-        int lastRecordLen=byteBuffer.getInt();
-        int skipToPos=lastRecordPos+Long.BYTES+Integer.BYTES+lastRecordLen;
-        int increment = len + Integer.BYTES +Long.BYTES;//len(offset)+len(len)+len(msg);
-        return BLOCK_SIZE >= increment + skipToPos;
+        int writePos = getNextWritePos();
+        int increment = len + Integer.BYTES + Long.BYTES;//len(offset)+len(len)+len(msg);
+        return BLOCK_SIZE >= increment + writePos;
     }
 
     public long write(byte[] bytes) {
-        int lastRecordPos=index.getLastRecordPosition();
-        long lastRecordOffset=index.getLastOffset();
-        long rtnOffset=lastRecordOffset+1;
-        byteBuffer.position(lastRecordPos);
-        byteBuffer.getLong();
-        int len=byteBuffer.getInt();
-        int skipToPos= lastRecordPos+Long.BYTES+Integer.BYTES+len;
-        byteBuffer.position(skipToPos);
+        long lastRecordOffset = index.getLastOffset();
+        long rtnOffset = lastRecordOffset + 1;
+        int writePos = getNextWritePos();
+        byteBuffer.position(writePos);
         byteBuffer.putLong(rtnOffset);
         byteBuffer.putInt(bytes.length);
         byteBuffer.put(bytes);
         //todo refine the detail of update index
-        index.updateIndex(rtnOffset,skipToPos);
+        index.updateIndex(rtnOffset, writePos);
         return rtnOffset;
     }
 
     public byte[] read(long offset) {
-        int pos=this.index.getReadPosition(offset);
+        int pos = this.index.getReadPosition(offset);
         byteBuffer.position(pos);
         byteBuffer.getLong();
-        int len=byteBuffer.getInt();
-        byte[] bytes=new byte[len];
+        int len = byteBuffer.getInt();
+        byte[] bytes = new byte[len];
         byteBuffer.get(bytes);
         return bytes;
     }
@@ -106,6 +110,8 @@ public class RandomAccessBlock {
     public void sync() {
         if (mappedBlock != null)
             mappedBlock.force();
+        if (index != null)
+            index.sync();
     }
 
     public void close() {
@@ -127,15 +133,16 @@ public class RandomAccessBlock {
                     return null;
                 }
             });
+
             mappedBlock = null;
             byteBuffer = null;
+            index.close();
             fileChannel.close();
             blockFile.close();
         } catch (IOException e) {
             LOG.error("close fqueue block file failed", e);
         }
     }
-
 
 
     /**
@@ -147,10 +154,26 @@ public class RandomAccessBlock {
      * @return
      */
     private String getBlockFilePath(String indexName, String fileDir) {
-        String blockName = RandomAccessTopicQueue.BLOCK_PREFIX + indexName.substring(4);
+        String blockName = RandomAccessTopicQueue.BLOCK_PREFIX + indexName.substring(5);
         String blockFilePath = fileDir + File.separator + blockName;
         return blockFilePath;
 
+    }
+
+    private int getNextWritePos() {
+        int lastRecordPos = index.getLastRecordPosition();
+        if (lastRecordPos == -1) {
+            // it means block is empty
+            // skip first 4 bytes reserved for message num
+            return Integer.BYTES;
+        } else {
+            byteBuffer.position(lastRecordPos);
+            byteBuffer.getLong();
+            int lastRecordLen = byteBuffer.getInt();
+            int writePos = lastRecordPos + Long.BYTES + Integer.BYTES + lastRecordLen;
+            return writePos;
+
+        }
     }
 
 }

@@ -38,7 +38,6 @@ public class DiskTopicQueueIndex implements TopicQueueIndex {
                 this.indexFile = new RandomAccessFile(file, "rw");
                 byte[] bytes = new byte[8];
                 this.indexFile.read(bytes, 0, 8);
-                System.out.println(new String(bytes));
                 if (!MAGIC.equals(new String(bytes))) {
                     throw new IllegalArgumentException("version mismatch");
                 }

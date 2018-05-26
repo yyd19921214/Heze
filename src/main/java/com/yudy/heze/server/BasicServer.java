@@ -4,6 +4,7 @@ import com.yudy.heze.config.ServerConfig;
 import com.yudy.heze.serializer.NettyDecoder;
 import com.yudy.heze.serializer.NettyEncode;
 import com.yudy.heze.store.pool.BasicTopicQueuePool;
+import com.yudy.heze.store.pool.RandomAccessQueuePool;
 import com.yudy.heze.util.PortUtils;
 import com.yudy.heze.util.ZkUtils;
 import io.netty.bootstrap.ServerBootstrap;
@@ -94,7 +95,8 @@ public class BasicServer implements MServer{
             e.printStackTrace();
         }
 
-        BasicTopicQueuePool.startup(zkClient,config);
+        //BasicTopicQueuePool.startup(zkClient,config);
+        RandomAccessQueuePool.startup(zkClient,config);
     }
 
     private ServerBootstrap configServer() {
@@ -142,8 +144,7 @@ public class BasicServer implements MServer{
             f.channel().close();
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
-        // unregister from zk
-        BasicTopicQueuePool.destory();
+        RandomAccessQueuePool.destroy();
         if (zkClient!=null&&StringUtils.isNotBlank(zkPath)&&zkClient.exists(zkPath)){
             zkClient.deleteRecursive(zkPath);
             zkClient.close();
