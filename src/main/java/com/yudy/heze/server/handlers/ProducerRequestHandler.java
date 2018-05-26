@@ -4,6 +4,7 @@ import com.yudy.heze.network.Message;
 import com.yudy.heze.network.Topic;
 import com.yudy.heze.server.RequestHandler;
 import com.yudy.heze.store.pool.BasicTopicQueuePool;
+import com.yudy.heze.store.pool.RandomAccessQueuePool;
 import com.yudy.heze.util.DataUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +22,7 @@ public class ProducerRequestHandler implements RequestHandler {
 
             if (topics!=null){
                 for (Topic topic:topics){
-                    BasicTopicQueuePool.getQueueOrCreate(topic.getTopic()).offer(DataUtils.serialize(topic.getContent()));
-//                    TopicQueuePool.getQueueOrCreate(topic.getTopic()).offer(DataUtils.serialize(topic));
+                    RandomAccessQueuePool.getQueueOrCreate(topic.getTopic()).append(DataUtils.serialize(topic.getContent()));
                 }
                 LOGGER.info("Producer request handler, receive message:"+topics.toString());
             }

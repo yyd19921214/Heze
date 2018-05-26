@@ -163,7 +163,9 @@ public class RandomAccessBlock {
     private int getNextWritePos() {
         int lastRecordPos = index.getLastRecordPosition();
         if (lastRecordPos == -1) {
-            return 0;
+            // it means block is empty
+            // skip first 4 bytes reserved for message num
+            return Integer.BYTES;
         } else {
             byteBuffer.position(lastRecordPos);
             byteBuffer.getLong();
