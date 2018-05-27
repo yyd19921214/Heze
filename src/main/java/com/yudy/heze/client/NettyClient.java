@@ -6,13 +6,14 @@ import com.yudy.heze.exception.TimeoutException;
 import com.yudy.heze.network.Message;
 import com.yudy.heze.serializer.NettyDecoder;
 import com.yudy.heze.serializer.NettyEncode;
-import com.yudy.heze.zk.ZkClient;
+//import com.yudy.heze.zk.ZkClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import org.I0Itec.zkclient.ZkClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,11 +44,12 @@ public class NettyClient {
         this.eventLoopGroupWorker = new NioEventLoopGroup();
     }
 
-    public void initZKClient(ServerConfig config){
-        if (config.getEnableZookeeper()&&zkClient==null){
-            String authString=config.getZkUsername()+":"+config.getZkPassword();
-            //todo enable session time and connection time
-            this.zkClient=new ZkClient(config.getZkConnect(),authString);
+    public void initZKClient(ServerConfig config) {
+        if (config.getEnableZookeeper() && zkClient == null) {
+            // todo add acl control of zk;
+            // String authString = config.getZkUsername() + ":" + config.getZkPassword();
+            // todo enable session time and connection time
+            this.zkClient = new ZkClient(config.getZkConnect());
         }
 
     }
@@ -66,7 +68,6 @@ public class NettyClient {
                                     new NettyDecoder(),
                                     new NettyEncode(),
                                     new NettyClientHandler()
-
                             );
                         }
                     });
@@ -91,20 +92,19 @@ public class NettyClient {
         this.connected = connected;
     }
 
-    public Message write(final Message request) throws TimeoutException,SendRequestException{
-        final ResponseFuture responseFuture=new ResponseFuture(request.getSeqId());
-        responseTable.put(responseFuture.getId(),responseFuture);
-        Message response=null;
-        if (channel!=null){
+    public Message write(final Message request) throws TimeoutException, SendRequestException {
+        final ResponseFuture responseFuture = new ResponseFuture(request.getSeqId());
+        responseTable.put(responseFuture.getId(), responseFuture);
+        Message response = null;
+        if (channel != null) {
             this.channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                    if (channelFuture.isSuccess()){
+                    if (channelFuture.isSuccess()) {
                         responseFuture.setIsOk(true);
-                    }
-                    else{
+                    } else {
                         responseFuture.setIsOk(false);
-                        responseTable.remove(responseFuture.getId(),responseFuture);
+                        responseTable.remove(responseFuture.getId(), responseFuture);
                         responseFuture.setCause(channelFuture.cause());
                         responseFuture.setResponse(null);
                         LOGGER.warn("send a request to channel <{}> failed.\nREQ:{}", channelFuture.channel(), request);
@@ -114,11 +114,11 @@ public class NettyClient {
             });
         }
         try {
-            response=responseFuture.waitResponse(5000, TimeUnit.SECONDS);
+            response = responseFuture.waitResponse(5000, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if (null==response){
+        if (null == response) {
             if (responseFuture.isOk()) {
                 throw new TimeoutException(
                         String.format("wait response on the channel <%s> timeout 10 (s).", this.channel),
@@ -133,22 +133,22 @@ public class NettyClient {
         return response;
     }
 
-    public boolean writeAsync(final Message request){
-        if (channel!=null) {
+    public boolean writeAsync(final Message request) {
+        if (channel != null) {
             this.channel.writeAndFlush(request);
             return true;
         }
         return false;
     }
 
-    public void stop(){
+    public void stop() {
         LOGGER.info("close channel:{}", this.channel);
         eventLoopGroupWorker.shutdownGracefully();
         defaultEventExecutorGroup.shutdownGracefully();
-        if (this.channel!=null){
+        if (this.channel != null) {
             this.channel.close();
         }
-        connected=false;
+        connected = false;
         LOGGER.info("close channel:{} ok.", this.channel);
 
     }

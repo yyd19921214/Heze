@@ -10,7 +10,7 @@ public class Topic implements Serializable {
 
     private String topic;
 
-    private int readCounter;
+    private long readOffset;
 
     private Serializable content;
 
@@ -26,20 +26,21 @@ public class Topic implements Serializable {
         return content;
     }
 
-    public void setContent(Serializable content){
-        this.content=content;
+    public void setContent(Serializable content) {
+        this.content = content;
     }
 
-    public int getReadCounter() {
-        return readCounter;
+    public long getReadOffset() {
+        return readOffset;
     }
 
-    public void setReadCounter(int readCounter) {
-        this.readCounter = readCounter;
+    public void setReadOffset(long readOffset) {
+        this.readOffset = readOffset;
     }
 
-    public String toString(){
-        return String.format("topic:%s,counter:%d,content:%s", topic, readCounter, content.toString());
+
+    public String toString() {
+        return String.format("topic:%s,offset:%d,content:%s", topic, readOffset, content.toString());
     }
 
 }
