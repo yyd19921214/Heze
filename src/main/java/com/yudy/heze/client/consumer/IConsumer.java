@@ -7,11 +7,8 @@ import java.util.List;
 
 public interface IConsumer extends Closeable{
 
-    List<Topic> poll(int fetchSize);
+    List<Topic> poll();
 
     boolean subscribe(List<String> topics);
-
-    boolean unsubscribe();
-
 
 }
