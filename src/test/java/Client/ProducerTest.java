@@ -27,7 +27,7 @@ public class ProducerTest {
 
     static ZkClient zkClient;
 
-    static String ZkConnectStr = "127.0.0.1:2181";
+    static String ZkConnectStr = "40.71.225.3:2181";
 
     private String topicName = "test-topic";
 
@@ -37,7 +37,7 @@ public class ProducerTest {
 
     private String fileDir = "data";
 
-    private String producerConfFile = "file:///D://heze/conf/config.properties";
+    private String producerConfFile = "file:///C://opensource/Heze/conf/config.properties";
 
     @BeforeClass
     public static void zkInit() {
@@ -49,7 +49,7 @@ public class ProducerTest {
 
 
         zkClient.deleteRecursive(ZK_BROKER_GROUP);
-//
+
         ServerInThread st = new ServerInThread();
         Thread serverThread = new Thread(st);
         serverThread.start();
@@ -89,36 +89,6 @@ public class ProducerTest {
         }
         topicQueue.close();
     }
-
-//    @Test
-//    public void test002_ServerAutoFind() throws InterruptedException {
-//        ServerInThread st=new ServerInThread();
-//        Thread serverThread=new Thread(st);
-//        serverThread.start();
-//        Thread.sleep(2000L);
-//
-//
-//        BasicProducer producer=BasicProducer.getInstance();
-//        producer.init(producerConfFile);
-//        Assert.assertEquals(1,producer.serverIpMap.size());
-//
-//
-//        ServerInThread st2=new ServerInThread();
-//        st2.configPath="conf/config2.properties";
-//        Thread serverThread2=new Thread(st2);
-//        serverThread2.start();
-//        Thread.sleep(2000L);
-//        Assert.assertEquals(2,producer.serverIpMap.size());
-//
-//        st.stopNow();
-//        Thread.sleep(2000L);
-//        Assert.assertEquals(1,producer.serverIpMap.size());
-//        st2.stopNow();
-//        Thread.sleep(2000L);
-//        Assert.assertEquals(0,producer.serverIpMap.size());
-//        producer.stop();
-//
-//    }
 
 
     class ServerInThread implements Runnable {

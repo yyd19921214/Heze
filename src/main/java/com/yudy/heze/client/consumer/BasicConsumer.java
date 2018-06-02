@@ -19,6 +19,7 @@ import com.google.common.collect.ArrayListMultimap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -97,8 +98,14 @@ public class BasicConsumer{
         } catch (SendRequestException e) {
             throw e;
         }
-        //topicOffset.getAndIncrement();
+        topicOffset.getAndIncrement();
         return rtTopics;
+    }
+
+    public void close() {
+        nettyClient.stop();
+        zkClient.close();
+
     }
 
 

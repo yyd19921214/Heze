@@ -18,6 +18,7 @@ public class FetchRequestHandler implements RequestHandler {
 
     @Override
     public Message handler(Message request) {
+        System.out.println("get fetch request!!!");
         List<Topic> results = new ArrayList<>();
         List<Topic> topics = (List<Topic>) DataUtils.deserialize(request.getBody());
         if (topics != null) {
