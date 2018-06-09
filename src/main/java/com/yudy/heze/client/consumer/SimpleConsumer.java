@@ -155,9 +155,7 @@ public class SimpleConsumer implements IConsumer {
                 LOGGER.error(String.format("consumer %s:%d error：", host, port));
             }
         }
-
         return nettyClient.isConnected();
-
     }
 
     private String ChoiceServer() {
