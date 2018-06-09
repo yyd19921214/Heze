@@ -22,12 +22,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static com.yudy.heze.util.ZkUtils.ZK_BROKER_GROUP;
 
 /**
  * most simple and basic consumer
- * each poll only fetch one record returned by server
  * only support sync fetch and process
  * no any cache used in this consumer
  * only one topic subscribe supported
@@ -49,6 +49,9 @@ public class BasicConsumer{
 
     private AtomicLong topicOffset;
 
+    //default 5 records per topic for one net request
+    private int fetchBatch=5;
+
     public BasicConsumer(ServerConfig config, String topic) {
         subscribeTopic = topic;
         topicOffset=new AtomicLong(1L);
@@ -64,7 +67,7 @@ public class BasicConsumer{
 
     public List<Topic> poll() {
         if (reConnect()) {
-            return fetch();
+            return fetch(fetchBatch);
         }
         return null;
     }
@@ -99,6 +102,39 @@ public class BasicConsumer{
             throw e;
         }
         topicOffset.getAndIncrement();
+        return rtTopics;
+    }
+
+    private List<Topic> fetch(int size){
+        List<Topic> requestTopicList = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            Topic requestTopic=new Topic();
+            requestTopic.setTopic(subscribeTopic);
+            requestTopic.setReadOffset(topicOffset.get()+i);
+            requestTopicList.add(requestTopic);
+        }
+        Message request = Message.newRequestMessage();
+        request.setReqHandlerType(RequestHandler.FETCH);
+        request.setBody(DataUtils.serialize(requestTopicList));
+        List<Topic> rtTopics = null;
+        try {
+            Message response = nettyClient.write(request);
+            if (response.getType() == TransferType.EXCEPTION.value) {
+                // 有异常
+                System.out.println("Cuonsumer fetch message error");
+                LOGGER.error("Cuonsumer fetch message error");
+            } else {
+                if (null != response.getBody()) {
+                    rtTopics = (List<Topic>) DataUtils.deserialize(response.getBody());
+                }
+            }
+        } catch (TimeoutException e) {
+            throw e;
+        } catch (SendRequestException e) {
+            throw e;
+        }
+        //rtTopics.stream().max(Comparator.comparingLong(t->t.getReadOffset())).get().getReadOffset();
+        topicOffset.set(rtTopics.stream().max(Comparator.comparingLong(t->t.getReadOffset())).get().getReadOffset());
         return rtTopics;
     }
 

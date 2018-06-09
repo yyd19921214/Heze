@@ -26,8 +26,11 @@ public class FetchRequestHandler implements RequestHandler {
                 RandomAccessTopicQueue queue = RandomAccessQueuePool.getQueue(topic.getTopic());
                 byte[] rtn=queue.read(topic.getReadOffset());
                 if (null != rtn) {
-                    Topic tmp = (Topic) DataUtils.deserialize(rtn);
+                    String content=(String) DataUtils.deserialize(rtn);
+                    Topic tmp = new Topic();
+                    tmp.setContent(content);
                     tmp.setReadOffset(topic.getReadOffset()+1);
+                    tmp.setTopic(topic.getTopic());
                     results.add(tmp);
                 }
             }
