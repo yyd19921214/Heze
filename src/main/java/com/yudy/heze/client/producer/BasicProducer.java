@@ -59,8 +59,7 @@ public class BasicProducer {
     public void init(String path) {
         File mainFile = null;
         try {
-            URL url = new URL(path);
-            mainFile = new File(url.getFile()).getCanonicalFile();
+            mainFile = new File(path).getCanonicalFile();
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(2);
