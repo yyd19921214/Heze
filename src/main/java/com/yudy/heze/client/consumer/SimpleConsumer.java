@@ -21,13 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.yudy.heze.util.ZkUtils.ZK_BROKER_GROUP;
 
-/**
- * most simple and basic consumer
- * each poll only fetch one record for each topic
- * only support sync fetch and process
- * no any cache used in such consumer
- * only one topic subscribe supported
- */
 public class SimpleConsumer implements IConsumer {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(SimpleConsumer.class);

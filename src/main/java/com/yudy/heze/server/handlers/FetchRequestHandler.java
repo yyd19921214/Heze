@@ -3,8 +3,8 @@ package com.yudy.heze.server.handlers;
 import com.yudy.heze.network.Message;
 import com.yudy.heze.network.Topic;
 import com.yudy.heze.server.RequestHandler;
-import com.yudy.heze.store.queue.TopicQueue;
-import com.yudy.heze.store.pool.TopicQueuePool;
+import com.yudy.heze.store.pool.RandomAccessQueuePool;
+import com.yudy.heze.store.queue.RandomAccessTopicQueue;
 import com.yudy.heze.util.DataUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,35 +18,18 @@ public class FetchRequestHandler implements RequestHandler {
 
     @Override
     public Message handler(Message request) {
+        System.out.println("get fetch request!!!");
         List<Topic> results = new ArrayList<>();
         List<Topic> topics = (List<Topic>) DataUtils.deserialize(request.getBody());
         if (topics != null) {
             for (Topic topic : topics) {
-                int readCounter = 0;
-                byte[] tpc = null;
-                boolean backupQueueOver = false;
-                //todo
-//                BackupQueue backupQueue = BackupQueuePool.getBackupQueueFromPool(topic.getTopic());
-//                if(null != backupQueue){
-//                    tpc = backupQueue.poll();
-//                    readCounter = backupQueue.getReadIndex().getReadCounter();
-//                    if(tpc == null && readCounter == backupQueue.getWriteIndex().getWriteCounter()){
-//                        backupQueueOver = true;
-//                    }
-//                }
-//                if(backupQueue == null || backupQueueOver){
-                TopicQueue queue = TopicQueuePool.getQueue(topic.getTopic());
-                if (null != queue) {
-                    tpc = queue.poll();
-                    readCounter = queue.getReadIndex().getReadCounter();
-                }
-
-                if (null != tpc) {
-                    Topic tmp = (Topic) DataUtils.deserialize(tpc);
-                    tmp.setReadCounter(readCounter);
+                RandomAccessTopicQueue queue = RandomAccessQueuePool.getQueue(topic.getTopic());
+                byte[] rtn=queue.read(topic.getReadOffset());
+                if (null != rtn) {
+                    Topic tmp = (Topic) DataUtils.deserialize(rtn);
+                    tmp.setReadOffset(topic.getReadOffset()+1);
                     results.add(tmp);
                 }
-
             }
         }
         Message response=Message.newResponseMessage();
@@ -55,7 +38,6 @@ public class FetchRequestHandler implements RequestHandler {
             response.setBody(DataUtils.serialize(results));
             LOGGER.info("Fetch request handler, message:"+results.toString());
         }
-
         return response;
     }
 }

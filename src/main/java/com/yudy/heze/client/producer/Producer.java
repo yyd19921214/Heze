@@ -180,9 +180,9 @@ public class Producer {
 
     private void loadClusterFromZK(ServerConfig config) {
         client.initZKClient(config);
-        if (config.getEnableZookeeper()) {
-            ZkUtils.getCluster(client.zkClient);
-        }
+//        if (config.getEnableZookeeper()) {
+//            ZkUtils.getCluster(client.zkClient);
+//        }
     }
 
 
