@@ -29,7 +29,7 @@ public class FetchRequestHandler implements RequestHandler {
                     String content=(String) DataUtils.deserialize(rtn);
                     Topic tmp = new Topic();
                     tmp.setContent(content);
-                    tmp.setReadOffset(topic.getReadOffset()+1);
+                    tmp.setReadOffset(topic.getReadOffset());
                     tmp.setTopic(topic.getTopic());
                     results.add(tmp);
                 }
