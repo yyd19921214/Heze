@@ -30,23 +30,28 @@ public class ConsumerTest {
 
     @BeforeClass
     public static void zkInit() {
-        zkClient = new ZkClient(ZkConnectStr, 4000);
+        zkClient = new ZkClient(Config4Test.ZkConnectString, 4000);
     }
-    static String ZkConnectStr = "40.71.225.3:2181";
 
-    private String topicName = "test-topic";
-
-    private String configPath="conf/config.properties";
 
 
     @Test
     public void test001_ConsumerPoll() throws InterruptedException {
 
+        ServerConfig config=new ServerConfig(Config4Test.configPath);
+        BasicConsumer consumer=new BasicConsumer(config,Config4Test.topicName);
 
-        ServerConfig config=new ServerConfig(configPath);
-        BasicConsumer consumer=new BasicConsumer(config,topicName);
-        List<Topic> list=consumer.poll();
-        list.forEach(t-> System.out.println(t.getContent()));
+        //int preNum=Config4Test.recordNum/2;
+        List<Topic> list=consumer.poll(Config4Test.recordNum);
+        Assert.assertNotNull(list);
+        Assert.assertTrue(list.stream().allMatch(t->t.getContent().equals(String.format(Config4Test.topicContent,t.getReadOffset()))));
+        Assert.assertTrue(consumer.getNextOffset()==Config4Test.recordNum+1);
+        consumer.skipTo(50);
+        list=consumer.poll();
+        Assert.assertNotNull(list);
+        Assert.assertTrue(list.get(0).getReadOffset()==50);
+        Assert.assertTrue(list.stream().allMatch(t->t.getContent().equals(String.format(Config4Test.topicContent,t.getReadOffset()))));
+
         consumer.close();
     }
 

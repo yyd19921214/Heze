@@ -60,6 +60,9 @@ public class ServerConfig extends Config {
         return getString("mq.zk.password", "");
     }
 
+
+    public int getEachFetchRecordNums(){return getInt("mq.fetch.records",5);}
+
     /**
      * zookeeper session timeout
      */

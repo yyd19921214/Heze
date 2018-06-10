@@ -34,14 +34,14 @@ import static com.yudy.heze.util.ZkUtils.ZK_BROKER_GROUP;
  * very simple and fixed assigned algorithm used
  * no any commit logic
  */
-public class BasicConsumer{
+public class BasicConsumer {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BasicConsumer.class);
 
 
     private ZkClient zkClient;
     private NettyClient nettyClient;
-    private ListMultimap<String,String> topicServerMap;
+    private ListMultimap<String, String> topicServerMap;
     private Map<String, String> serverInfoMap; // ip&port for each server
 
     private final String subscribeTopic;
@@ -50,19 +50,20 @@ public class BasicConsumer{
     private AtomicLong topicOffset;
 
     //default 5 records per topic for one net request
-    private int fetchBatch=5;
+    private int fetchBatch = 5;
 
     public BasicConsumer(ServerConfig config, String topic) {
         subscribeTopic = topic;
-        topicOffset=new AtomicLong(1L);
+        topicOffset = new AtomicLong(1L);
         nettyClient = new NettyClient();
         nettyClient.initZKClient(config);
         zkClient = nettyClient.zkClient;
-        topicServerMap= ArrayListMultimap.create();
-        serverInfoMap=new HashMap<>();
+        topicServerMap = ArrayListMultimap.create();
+        serverInfoMap = new HashMap<>();
         initTopicInfo();
-        assignedServerInfo=getAssignedServer(subscribeTopic);
-        }
+        assignedServerInfo = getAssignedServer(subscribeTopic);
+        fetchBatch = config.getEachFetchRecordNums();
+    }
 
 
     public List<Topic> poll() {
@@ -72,8 +73,23 @@ public class BasicConsumer{
         return null;
     }
 
+    public List<Topic> poll(int size) {
+        if (reConnect()) {
+            return fetch(size);
+        }
+        return null;
+    }
+
+    public long getNextOffset() {
+        return topicOffset.get();
+    }
+
+    public void skipTo(long offset){
+        topicOffset.set(offset);
+    }
+
     private List<Topic> fetch() {
-        Topic topic=new Topic();
+        Topic topic = new Topic();
         topic.setTopic(subscribeTopic);
         topic.setReadOffset(topicOffset.get());
 
@@ -105,12 +121,12 @@ public class BasicConsumer{
         return rtTopics;
     }
 
-    private List<Topic> fetch(int size){
+    private List<Topic> fetch(int size) {
         List<Topic> requestTopicList = new ArrayList<>();
         for (int i = 0; i < size; i++) {
-            Topic requestTopic=new Topic();
+            Topic requestTopic = new Topic();
             requestTopic.setTopic(subscribeTopic);
-            requestTopic.setReadOffset(topicOffset.get()+i);
+            requestTopic.setReadOffset(topicOffset.get() + i);
             requestTopicList.add(requestTopic);
         }
         Message request = Message.newRequestMessage();
@@ -124,7 +140,7 @@ public class BasicConsumer{
                 System.out.println("Cuonsumer fetch message error");
                 LOGGER.error("Cuonsumer fetch message error");
             } else {
-                if (null != response.getBody()) {
+                if (null != response.getBody() && response.getBody().length > 0) {
                     rtTopics = (List<Topic>) DataUtils.deserialize(response.getBody());
                 }
             }
@@ -133,8 +149,9 @@ public class BasicConsumer{
         } catch (SendRequestException e) {
             throw e;
         }
-        //rtTopics.stream().max(Comparator.comparingLong(t->t.getReadOffset())).get().getReadOffset();
-        topicOffset.set(rtTopics.stream().max(Comparator.comparingLong(t->t.getReadOffset())).get().getReadOffset());
+        if (rtTopics != null) {
+            topicOffset.set(rtTopics.stream().max(Comparator.comparingLong(t -> t.getReadOffset())).get().getReadOffset() + 1);
+        }
         return rtTopics;
     }
 
@@ -143,8 +160,6 @@ public class BasicConsumer{
         zkClient.close();
 
     }
-
-
 
 
     // the structure of zk is like:
@@ -159,7 +174,7 @@ public class BasicConsumer{
             String serverInfo = zkClient.readData(ZK_BROKER_GROUP + "/" + server);
             List<String> topicsList = zkClient.getChildren(ZK_BROKER_GROUP + "/" + server);
             if (CollectionUtils.isNotEmpty(topicsList)) {
-                topicsList.forEach(t->topicServerMap.put(t,server));
+                topicsList.forEach(t -> topicServerMap.put(t, server));
             }
             serverInfoMap.put(server, serverInfo);
         }
@@ -169,7 +184,7 @@ public class BasicConsumer{
 
     private boolean reConnect() {
         if (!nettyClient.isConnected()) {
-            String ip=assignedServerInfo.split(":")[0];
+            String ip = assignedServerInfo.split(":")[0];
             int port = Integer.parseInt(assignedServerInfo.split(":")[1]);
             try {
                 nettyClient.open(ip, port);
@@ -184,9 +199,9 @@ public class BasicConsumer{
         return nettyClient.isConnected();
     }
 
-    private String getAssignedServer(String topic){
-        String serverName=topicServerMap.get(topic).get(0);
-        String serverInfo=serverInfoMap.get(serverName);
+    private String getAssignedServer(String topic) {
+        String serverName = topicServerMap.get(topic).get(0);
+        String serverInfo = serverInfoMap.get(serverName);
         return serverInfo;
     }
 

@@ -1,6 +1,7 @@
 package Client;
 
 import com.yudy.heze.client.producer.BasicProducer;
+import com.yudy.heze.config.Config;
 import com.yudy.heze.network.Topic;
 import com.yudy.heze.server.BasicServer;
 import com.yudy.heze.server.RequestHandler;
@@ -27,37 +28,26 @@ public class ProducerTest {
 
     static ZkClient zkClient;
 
-    static String ZkConnectStr = "40.71.225.3:2181";
-
-    private String topicName = "test-topic";
-
-    private String topicContent = "test-content_%d";
-
-    private RandomAccessTopicQueue topicQueue = null;
-
-    private String fileDir = "data";
-
-    private String producerConfFile = "conf/config.properties";
 
     @BeforeClass
     public static void zkInit() {
-        zkClient = new ZkClient(ZkConnectStr, 4000);
+        zkClient = new ZkClient(Config4Test.ZkConnectString, 4000);
     }
 
     @Test
-    public void test001_Start() throws InterruptedException {
+    public void test001_ProduceData() throws InterruptedException {
         BasicProducer producer = BasicProducer.getInstance();
-        producer.init(producerConfFile);
+        producer.init(Config4Test.configPath);
         Assert.assertTrue(!producer.serverIpMap.isEmpty());
         List<Topic> topics = new ArrayList<>();
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= Config4Test.recordNum; i++) {
             Topic topic = new Topic();
-            topic.setTopic(topicName);
-            topic.setContent(String.format(topicContent, i));
+            topic.setTopic(Config4Test.topicName);
+            topic.setContent(String.format(Config4Test.topicContent, i));
             topics.add(topic);
         }
         Map<String, String> params = new HashMap<>();
-        params.put("broker", "MyServer01");
+        params.put("broker", Config4Test.ServerName);
         boolean res = producer.send(topics, params);
         Assert.assertTrue(res);
         producer.stop();
