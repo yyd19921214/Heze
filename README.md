@@ -1,4 +1,4 @@
-# Heze
+、# Heze
 -----------------------
 **简单而高效的Java消息中间件**
 
@@ -24,7 +24,7 @@ Heze是一款高性能的Java消息中间件，在总体架构上模仿Kafka实�
 
 ## 最近更新
 
-项目目前正在快速开发中，下一步打算完善Consumer类的设计
+项目目前正在快速开发中，下一步打算完善Consumer类的设计，加入消费者组概念
 
 
 ## 使用
@@ -62,7 +62,9 @@ producer.send(topics, params);
 
 ### Consumer
 ``` text
-
+ServerConfig config = new ServerConfig(configPath);
+BasicConsumer consumer=new BasicConsumer(config,topicName);
+List<Topic> list = consumer.poll(recordNum);
 ```
 更多功能请参见文档
 
@@ -73,12 +75,10 @@ producer.send(topics, params);
 ## TODO
 
 - [ ] 更好的Consumer实现
-- [x] 实现Server端Master/Slave的复制
+- [ ] 实现Server端Master/Slave的复制
 - [x] 支持异步与同步发送
 
 ## 协助开发
-
-### 通过代码
 
 1. Fork
 2. 从 dev 分支新建一个分支
