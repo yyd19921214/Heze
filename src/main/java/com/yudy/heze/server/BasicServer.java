@@ -6,6 +6,7 @@ import com.yudy.heze.serializer.NettyEncode;
 import com.yudy.heze.store.pool.BasicTopicQueuePool;
 import com.yudy.heze.store.pool.RandomAccessQueuePool;
 import com.yudy.heze.util.PortUtils;
+import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.util.ZkUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -47,6 +48,8 @@ public class BasicServer implements MServer{
 
     private Thread shutDownHook;
 
+    private volatile boolean inSlaveMode;
+
     @Override
     public boolean startup(String configName) {
         File configFile;
@@ -85,13 +88,14 @@ public class BasicServer implements MServer{
         if (config.getIsSlaveOf()!=null){
             //String slaveOfMaster=config.getIsSlaveOf();
             LOGGER.info("server is run in slave mode");
-
+            //TODO register in zookeeper
             String masterPath=ZkUtils.ZK_BROKER_GROUP + "/" + config.getIsSlaveOf();
             if (!zkClient.exists(masterPath)){
                 LOGGER.error("master server is not existed!");
                 System.out.println("master server is not existed!");
                 return;
             }
+            inSlaveMode=true;
             zkClient.subscribeDataChanges(masterPath, new IZkDataListener() {
                 @Override
                 public void handleDataChange(String s, Object o) throws Exception {
@@ -100,16 +104,24 @@ public class BasicServer implements MServer{
 
                 @Override
                 public void handleDataDeleted(String s) throws Exception {
-
+                    wakeUpFromSlave();
                 }
             });
+            //TODO start thread to pull data from master
+            //Scheduler backupSchedule=new Scheduler();
+            while (inSlaveMode){
+
+            }
+
+
+
 
             //zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
 
 
 
-            //TODO register in zookeeper
-            //TODO start thread to pull data from master
+
+
 
 
 
@@ -213,6 +225,10 @@ public class BasicServer implements MServer{
 
     private boolean recovery(){
         return true;
+    }
+
+    private void wakeUpFromSlave(){
+        LOGGER.info("wakeup from slave now");
     }
 
 }
