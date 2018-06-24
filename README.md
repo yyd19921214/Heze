@@ -1,4 +1,4 @@
-、# Heze
+# Heze
 -----------------------
 **简单而高效的Java消息中间件**
 
@@ -82,7 +82,7 @@ List<Topic> list = consumer.poll(recordNum);
 
 1. Fork
 2. 从 dev 分支新建一个分支
-3. 编写代码，更新 Changelog 和 sphinx 文档，如果可能的话加上测试
+3. 编写代码，如果可能的话加上测试
 4. PR 到原 dev 分支
 
 ## LICENSE
