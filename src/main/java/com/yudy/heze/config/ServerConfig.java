@@ -36,6 +36,9 @@ public class ServerConfig extends Config {
 
     public String getServerName(){return getString("mq.server",null);}
 
+
+    public String getIsSlaveOf(){return getString("mq.slaveof",null);}
+
     /**
      * 备份节点
      *

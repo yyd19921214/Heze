@@ -14,6 +14,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import org.I0Itec.zkclient.IZkDataListener;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -80,6 +81,40 @@ public class BasicServer implements MServer{
         }
         zkClient.createPersistent(zkPath,true);
         zkClient.writeData(zkPath,config.getHost()+":"+config.getPort());
+
+        if (config.getIsSlaveOf()!=null){
+            //String slaveOfMaster=config.getIsSlaveOf();
+            LOGGER.info("server is run in slave mode");
+
+            String masterPath=ZkUtils.ZK_BROKER_GROUP + "/" + config.getIsSlaveOf();
+            if (!zkClient.exists(masterPath)){
+                LOGGER.error("master server is not existed!");
+                System.out.println("master server is not existed!");
+                return;
+            }
+            zkClient.subscribeDataChanges(masterPath, new IZkDataListener() {
+                @Override
+                public void handleDataChange(String s, Object o) throws Exception {
+
+                }
+
+                @Override
+                public void handleDataDeleted(String s) throws Exception {
+
+                }
+            });
+
+            //zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
+
+
+
+            //TODO register in zookeeper
+            //TODO start thread to pull data from master
+
+
+
+
+        }
 
         ServerBootstrap b = configServer();
         try {
