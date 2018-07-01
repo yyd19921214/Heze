@@ -150,6 +150,10 @@ public class RandomAccessTopicQueue {
         return true;
     }
 
+    public long getMaxOffset(){
+        return maxOffset;
+    }
+
 
     /**
      * the index name is like: index_{queueName}_{first offset of this index}.umq
