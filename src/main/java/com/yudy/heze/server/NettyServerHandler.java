@@ -43,6 +43,10 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
                 LOGGER.info(String.format("=====>send a request to channel <%s> success, type:%s",
                         channelHandlerContext.channel(), typeValue(request.getReqHandlerType())));
             }
+            else if(request.getReqHandlerType()==RequestHandler.REPLICA){
+                LOGGER.info(String.format("=====>send a request to channel <%s> success, type:%s",
+                        channelHandlerContext.channel(), typeValue(request.getReqHandlerType())));
+            }
 
             channelHandlerContext.writeAndFlush(response);
         }

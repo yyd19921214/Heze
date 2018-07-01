@@ -1,10 +1,15 @@
 package com.yudy.heze.server;
 
+import com.yudy.heze.client.NettyClient;
 import com.yudy.heze.config.ServerConfig;
+import com.yudy.heze.network.Message;
+import com.yudy.heze.network.Topic;
+import com.yudy.heze.network.TransferType;
 import com.yudy.heze.serializer.NettyDecoder;
 import com.yudy.heze.serializer.NettyEncode;
 import com.yudy.heze.store.pool.BasicTopicQueuePool;
 import com.yudy.heze.store.pool.RandomAccessQueuePool;
+import com.yudy.heze.util.DataUtils;
 import com.yudy.heze.util.PortUtils;
 import com.yudy.heze.util.Scheduler;
 import com.yudy.heze.util.ZkUtils;
@@ -23,6 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 
 public class BasicServer implements MServer{
@@ -50,6 +58,8 @@ public class BasicServer implements MServer{
 
     private volatile boolean inSlaveMode;
 
+    private NettyClient nettyClient;
+
     @Override
     public boolean startup(String configName) {
         File configFile;
@@ -75,7 +85,6 @@ public class BasicServer implements MServer{
         if (config.getServerName()==null){
             throw new IllegalArgumentException("Must set a Name for this broker");
         }
-
         //register in zk
         zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
         zkPath=ZkUtils.ZK_BROKER_GROUP+"/"+config.getServerName();
@@ -85,15 +94,14 @@ public class BasicServer implements MServer{
         zkClient.createPersistent(zkPath,true);
         zkClient.writeData(zkPath,config.getHost()+":"+config.getPort());
 
+        RandomAccessQueuePool.startup(zkClient,config);
+
         if (config.getIsSlaveOf()!=null){
-            //String slaveOfMaster=config.getIsSlaveOf();
-            LOGGER.info("server is run in slave mode");
-            //TODO register in zookeeper
+            System.out.println("server is run in slave mode");
             String masterPath=ZkUtils.ZK_BROKER_GROUP + "/" + config.getIsSlaveOf();
             if (!zkClient.exists(masterPath)){
-                LOGGER.error("master server is not existed!");
                 System.out.println("master server is not existed!");
-                return;
+                throw new IllegalArgumentException("master server is not existed!");
             }
             inSlaveMode=true;
             zkClient.subscribeDataChanges(masterPath, new IZkDataListener() {
@@ -101,30 +109,50 @@ public class BasicServer implements MServer{
                 public void handleDataChange(String s, Object o) throws Exception {
 
                 }
-
                 @Override
                 public void handleDataDeleted(String s) throws Exception {
                     wakeUpFromSlave();
                 }
             });
+
+            String urlPort = zkClient.readData(masterPath);
+            String masterUrl= urlPort.split(":")[0];
+            int masterPort= Integer.parseInt(urlPort.split(":")[1]);
+            nettyClient=new NettyClient();
+            nettyClient.open(masterUrl,masterPort);
+
             //TODO start thread to pull data from master
-            //Scheduler backupSchedule=new Scheduler();
             while (inSlaveMode){
+                Set<String> topicNames=RandomAccessQueuePool.getAllQueueNames();
+
+                List<Topic> requestTopicList=new ArrayList<>();
+                for (String topicName:topicNames){
+                    long maxOffset=RandomAccessQueuePool.getQueue(topicName).getMaxOffset();
+                    Topic requestTopic=new Topic();
+                    requestTopic.setTopic(topicName);
+                    requestTopic.setReadOffset(maxOffset+1);
+                    requestTopicList.add(requestTopic);
+                }
+
+                Message request=Message.newRequestMessage();
+                request.setReqHandlerType(RequestHandler.REPLICA);
+                request.setBody(DataUtils.serialize(requestTopicList));
+                Message response=nettyClient.write(request);
+                if (response.getType() != TransferType.EXCEPTION.value && response.getBody() != null && response.getBody().length > 0) {
+                    List<Topic> rtTopics = (List<Topic>) DataUtils.deserialize(response.getBody());
+                    for (Topic t : rtTopics) {
+                        String rtName = t.getTopic();
+                        RandomAccessQueuePool.getQueueOrCreate(rtName).append(DataUtils.serialize(t.getContent()));
+                    }
+                }
+                try {
+                    Thread.sleep(1000*60*5L);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
 
             }
-
-
-
-
-            //zkClient = new ZkClient(config.getZkConnect(), config.getZkConnectionTimeoutMs());
-
-
-
-
-
-
-
-
 
         }
 
@@ -141,9 +169,6 @@ public class BasicServer implements MServer{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        //BasicTopicQueuePool.startup(zkClient,config);
-        RandomAccessQueuePool.startup(zkClient,config);
     }
 
     private ServerBootstrap configServer() {
@@ -196,6 +221,9 @@ public class BasicServer implements MServer{
             zkClient.deleteRecursive(zkPath);
             zkClient.close();
         }
+        if(nettyClient!=null){
+            nettyClient.stop();
+        }
         LOGGER.info("Netty server stopped");
         System.out.println("Netty server stopped");
 
@@ -228,6 +256,7 @@ public class BasicServer implements MServer{
     }
 
     private void wakeUpFromSlave(){
+        inSlaveMode=false;
         LOGGER.info("wakeup from slave now");
     }
 

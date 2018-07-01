@@ -62,6 +62,10 @@ public class RandomAccessQueuePool {
         return topicQueue;
     }
 
+    public static synchronized Set<String> getAllQueueNames(){
+        return INSTANCE.queueMap.keySet();
+    }
+
     private RandomAccessQueuePool(ZkClient zkClient, ServerConfig config) {
         this.zkClient = zkClient;
         if (StringUtils.isBlank(config.getDataDir())) {
