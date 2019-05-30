@@ -24,6 +24,9 @@ Heze是一款高性能的Java消息中间件，在总体架构上模仿Kafka实�
 
 ## 最近更新
 
+
+
+
 项目目前正在快速开发中，下一步打算完善Consumer类的设计，加入消费者组概念
 
 
@@ -34,8 +37,8 @@ Heze是一款高性能的Java消息中间件，在总体架构上模仿Kafka实�
 public static void main(String[] args) {
     BasicServer basicServer=new BasicServer();
     basicServer.startup(configPath);
-    basicServer.registerHandler(RequestHandler.FETCH,new        FetchRequestHandler());
-    basicServer.registerHandler(RequestHandler.PRODUCER,new     ProducerRequestHandler());
+    basicServer.registerHandler(RequestHandler.FETCH,new FetchRequestHandler());
+    basicServer.registerHandler(RequestHandler.PRODUCER,new ProducerRequestHandler());
     try {
         basicServer.waitForClose();
     } catch (InterruptedException e) {
