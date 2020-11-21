@@ -45,10 +45,7 @@ public class NettyClient {
     }
 
     public void initZKClient(ServerConfig config) {
-        if (config.getEnableZookeeper() && zkClient == null) {
-            // todo add acl control of zk;
-            // String authString = config.getZkUsername() + ":" + config.getZkPassword();
-            // todo enable session time and connection time
+        if (config.getEnableZookeeper() && zkClient == null) {    
             this.zkClient = new ZkClient(config.getZkConnect());
         }
 

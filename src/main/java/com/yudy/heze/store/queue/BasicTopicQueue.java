@@ -25,17 +25,11 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
     private ReentrantLock writeLock;
     private AtomicInteger size;
 
-//    /**
-//     * 消息队列支持多个消费者组之间的隔离读取
-//     * 即消费者组A读取数据或并不会影响消费者组B读取数据
-//     * 为此我们需要维护一个映射保存不同消费者组的index文件
-//     */
-//
-//    // 记录每个ConsumerGroup对应的读取块
-//    private Map<String, BasicTopicQueueBlock> activeReadBlockMap;
-//    // 记录每个ConsumerGroup对应的索引文件
-//    private Map<String, BasicTopicQueueIndex> activeReadIndexMap;
-
+   /**
+    * 消息队列支持多个消费者组之间的隔离读取
+    * 即消费者组A读取数据或并不会影响消费者组B读取数据
+    * 为此我们需要维护一个映射保存不同消费者组的index文件
+    */
 
     public BasicTopicQueue(String queueName, String fileDir) {
         this.queueName = queueName;
@@ -45,10 +39,7 @@ public class BasicTopicQueue extends AbstractQueue<byte[]> {
         this.index = new BasicTopicQueueIndex(queueName, fileDir);
         this.size = new AtomicInteger(index.getWriteCounter());
         this.writeBlock = new BasicTopicQueueBlock(index, BasicTopicQueueBlock.formatBlockFilePath(queueName, index.getWriteNum(), fileDir));
-//        this.activeReadBlockMap = new ConcurrentHashMap<>();
-//        this.activeReadIndexMap = new ConcurrentHashMap<>();
-
-        if (index.getReadNum() == index.getWriteNum()) {
+       if (index.getReadNum() == index.getWriteNum()) {
             this.readBlock = this.writeBlock.duplicate();
         } else {
             this.readBlock = new BasicTopicQueueBlock(index, BasicTopicQueueBlock.formatBlockFilePath(queueName, index.getReadNum(), fileDir));

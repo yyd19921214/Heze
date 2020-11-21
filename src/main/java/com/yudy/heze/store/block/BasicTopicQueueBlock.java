@@ -131,10 +131,11 @@ public class BasicTopicQueueBlock {
      */
     public int countRecord(){
         int count=0;
-        int readPos=index.getReadPosition();
-        int readCount=index.getReadCounter();
+        int readPos = index.getReadPosition();
+        int readCount = index.getReadCounter();
         index.putReadPosition(0);
-        while (read()!=null){
+        while (read()!=null)
+        {
             count++;
         }
         index.putReadCounter(readCount);

@@ -39,8 +39,7 @@ public class ServerRegister implements Closeable{
 
     private void registerBrokerGroupInZk() {
         String zkPath = ZK_BROKER_GROUP;
-        ZkUtils.makeSurePersistentPathExist(zkClient, zkPath);
-        System.out.println("successfully here");
+        ZkUtils.makeSurePersistentPathExist(zkClient, zkPath);        
         LOGGER.info("registering broker group" + zkPath);
         Group brokerGroup = new Group(config.getBrokerGroupName(), config.getHost(), config.getPort());
         zkPath += "/" + brokerGroup.getName();
